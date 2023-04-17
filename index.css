@@ -132,22 +132,6 @@ body {
   counter-increment: picked2;
 }
 
-#count1 {
-  color: var(--color1BG);
-}
-
-#count2 {
-  color: var(--color2BG);
-}
-
-#x1::after {
-  content: counter(picked1);
-}
-
-#x2::after {
-  content: counter(picked2);
-}
-
 div[data-looping^="yes"]::after {
   content: "↩";
 }
