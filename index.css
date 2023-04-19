@@ -160,3 +160,17 @@ input {
 #colors input[data-jscolor] {
   width: 60px;
 }
+
+#starCounter {
+  margin: 3px 0;
+  padding: 3px;
+  border: 1px solid var(--midColor);
+  width: fit-content;
+}
+
+#starCountIncrements {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  grid-gap:2px;
+  align-items: center;
+}

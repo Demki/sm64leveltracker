@@ -8,6 +8,8 @@ const CONNECT_BUTTON = LEFT_MOUSE_BUTTON;
 const MARK_1_BUTTON = RIGHT_MOUSE_BUTTON;
 const MARK_2_BUTTON = MIDDLE_MOUSE_BUTTON;
 
+const DEFAULT_STAR_COUNT = 70;
+
 function mark(v) {
   return (ev) => {
     m(ev.target);
@@ -229,6 +231,12 @@ function toggleDisplay() {
   localStorage.setItem("displayVisible", !clist.contains("hidden"));
 }
 
+function toggleStarCounter() {
+  const clist = document.getElementById("starCounter").classList;
+  clist.toggle("hidden");
+  localStorage.setItem("starCounterVisible", !clist.contains("hidden"));
+}
+
 window.addEventListener("load", () => {
   document.getElementById("content").addEventListener("contextmenu", (ev) => { ev.preventDefault(); }, false);
   document.getElementById("content").addEventListener('mousedown', mousedown);
@@ -252,6 +260,14 @@ window.addEventListener("load", () => {
     i++;
     child.dataset.mark = '0';
   }
+
+  const incrementStarCountBtn = document.getElementById("incrementStarCountBtn");
+  if(incrementStarCountBtn) incrementStarCountBtn.addEventListener("click", incrementStarCount);
+  const decrementStarCountBtn = document.getElementById("decrementStarCountBtn");
+  if(decrementStarCountBtn) decrementStarCountBtn.addEventListener("click", decrementStarCount);
+
+  const starCounterBtn = document.getElementById("starCounterBtn");
+  if (starCounterBtn) starCounterBtn.addEventListener("click", toggleStarCounter);
   const displayBtn = document.getElementById("displayBtn");
   if (displayBtn) displayBtn.addEventListener("click", toggleDisplay);
   const nightBtn = document.getElementById("nightBtn");
@@ -277,6 +293,7 @@ window.addEventListener("load", () => {
   setShownTips(shownTips);
 
   if(JSON.parse(localStorage.getItem("displayVisible"))) toggleDisplay();
+  if(JSON.parse(localStorage.getItem("starCounterVisible"))) toggleStarCounter();
 
   const displayDiv = document.getElementById("display");
   const contentDiv = document.getElementById("content");
@@ -475,3 +492,18 @@ function toggleTips() {
   }
   setShownTips(shownTips);
 }
+
+function incrementStarCount() {
+  const el = document.getElementById("starCount");
+  const starCount = Number.parseInt(el.innerHTML);
+  if(Number.isNaN(starCount)) el.innerHTML = DEFAULT_STAR_COUNT.toString();
+  else el.innerHTML = (starCount + 1).toString();
+}
+
+function decrementStarCount() {
+  const el = document.getElementById("starCount");
+  const starCount = Number.parseInt(el.innerHTML);
+  if(Number.isNaN(starCount)) el.innerHTML = DEFAULT_STAR_COUNT.toString();
+  else el.innerHTML = (starCount - 1).toString();
+}
+
