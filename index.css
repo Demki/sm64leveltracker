@@ -166,6 +166,7 @@ input {
   padding: 3px;
   border: 1px solid var(--midColor);
   width: fit-content;
+  font-size: 200%;
 }
 
 #starCountIncrements {
@@ -173,4 +174,8 @@ input {
   grid-template-columns: 1fr 1fr;
   grid-gap:2px;
   align-items: center;
+}
+
+#starCountIncrements input {
+  font-size: 60%;
 }
