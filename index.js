@@ -242,6 +242,7 @@ window.addEventListener("load", () => {
   document.getElementById("content").addEventListener('mousedown', mousedown);
   document.getElementById("content").addEventListener('mousemove', mousemove);
   document.getElementById("content").addEventListener('mouseup', mouseup);
+  document.addEventListener('keydown', keyEventHandler);
 
   let i = 0;
   for (const child of document.getElementById("list").children) {
@@ -507,3 +508,17 @@ function decrementStarCount() {
   else el.innerHTML = (starCount - 1).toString();
 }
 
+
+function keyEventHandler(ev) {
+  switch(ev.code)
+  {
+    case "ArrowUp":
+      incrementStarCount();
+      break;
+    case "ArrowDown":
+      decrementStarCount();
+      break;
+    default:
+      break;
+  }
+}
