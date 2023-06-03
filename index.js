@@ -282,7 +282,7 @@ window.addEventListener("load", () => {
   const toggleTipsBtn = document.getElementById("toggleTipsBtn");
   if (toggleTipsBtn) toggleTipsBtn.addEventListener("click", toggleTips);
 
-  nightMode = localStorage.getItem("nightMode") === "true";
+  nightMode = (localStorage.getItem("nightMode") || "true") === "true";
   shortMode = localStorage.getItem("shortMode") === "true";
   hiddenBitS = localStorage.getItem("hiddenBitS") === "true";
   hiddenOthers = localStorage.getItem("hiddenOthers") === "true";
