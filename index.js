@@ -146,7 +146,7 @@ function dumpToList(...ls) {
 function disconnect(target) {
   const targetPath = target.parentElement;
   if (!isPath(targetPath)) return;
-  targetPath.looping = "no";
+  targetPath.dataset.looping = "no";
   if (prev.nextElementSibling !== null) {
     const afterTarget = [...dropUntilExc(x => x === target, targetPath.children)];
     if (afterTarget.length > 1) {
