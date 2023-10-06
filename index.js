@@ -399,7 +399,7 @@ function setShort(sm) {
       document.body.style.setProperty("--minItemWidth", "100px");
     } else {
       child.innerText = child.dataset.long;
-      document.body.style.setProperty("--minItemWidth", "200px");
+      document.body.style.setProperty("--minItemWidth", "240px");
     }
   }
 }
