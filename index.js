@@ -366,11 +366,6 @@ window.addEventListener("load", () => {
     child.dataset.mark = '0';
   }
 
-  const incrementStarCountBtn = document.getElementById("incrementStarCountBtn");
-  if(incrementStarCountBtn) incrementStarCountBtn.addEventListener("click", incrementStarCount);
-  const decrementStarCountBtn = document.getElementById("decrementStarCountBtn");
-  if(decrementStarCountBtn) decrementStarCountBtn.addEventListener("click", decrementStarCount);
-
   const [getNightMode, setNightMode]                  = localStorageState("nightMode", true, onSetNight);
   const [getShortMode, setShortMode]                  = localStorageState("shortMode", false, onSetShort);
   const [getHiddenBitS, setHiddenBitS]                = localStorageState("hiddenBitS", false, onSetHiddenBitS);
@@ -378,12 +373,12 @@ window.addEventListener("load", () => {
   const [getShownTips, setShownTips]                  = localStorageState("shownTips", false, onSetShownTips);
   const [getDisplayVisible, setDisplayVisible]        = localStorageState("displayVisible", false, onSetDisplayVisible);
   const [getStarCounterVisible,setStarCounterVisible] = localStorageState("starCounterVisible", false, onSetStarCounterVisible);
-  const [getDisplayWidth, setDisplayWidth]            = localStorageState("displayWidth", '300px', undefined, identity);
-  const [getDisplayHeight, setDisplayHeight]          = localStorageState("displayHeight", '200px', undefined, identity);
-  const [getContentWidth, setContentWidth]            = localStorageState("contentWidth", '800px', undefined, identity);
-  const [getContentHeight, setContentHeight]          = localStorageState("contentHeight", '400px', undefined, identity);
-  const [getMark1Color, setMark1Color]                = localStorageState("mark1Color", MARK_1_DEFAULT, onSetMark1Color, identity);
-  const [getMark2Color, setMark2Color]                = localStorageState("mark2Color", MARK_2_DEFAULT, onSetMark2Color, identity);
+  const [getDisplayWidth, setDisplayWidth]            = localStorageState("displayWidth", '300px', undefined, identity, identity);
+  const [getDisplayHeight, setDisplayHeight]          = localStorageState("displayHeight", '200px', undefined, identity, identity);
+  const [getContentWidth, setContentWidth]            = localStorageState("contentWidth", '800px', undefined, identity, identity);
+  const [getContentHeight, setContentHeight]          = localStorageState("contentHeight", '400px', undefined, identity, identity);
+  const [getMark1Color, setMark1Color]                = localStorageState("mark1Color", MARK_1_DEFAULT, onSetMark1Color, identity, identity);
+  const [getMark2Color, setMark2Color]                = localStorageState("mark2Color", MARK_2_DEFAULT, onSetMark2Color, identity, identity);
 
   const contentDiv = document.getElementById("content");
   contentDiv.style.setProperty("width", getContentWidth());
@@ -415,20 +410,21 @@ window.addEventListener("load", () => {
   document.getElementById("toggleOthersBtn")?.addEventListener?.("click", toggleStateCallback(getHiddenOthers      , setHiddenOthers      ));
   document.getElementById("toggleBitSBtn"  )?.addEventListener?.("click", toggleStateCallback(getHiddenBitS        , setHiddenBitS        ));
   document.getElementById("toggleTipsBtn"  )?.addEventListener?.("click", toggleStateCallback(getShownTips         , setShownTips         ));
+  document.getElementById("incrementStarCountBtn")?.addEventListener("click", incrementStarCount);
+  document.getElementById("decrementStarCountBtn")?.addEventListener("click", decrementStarCount);
 
   const mark1ColorPicker = document.getElementById("mark1ColorPicker");
   const mark2ColorPicker = document.getElementById("mark2ColorPicker");
   const resetColorsBtn   = document.getElementById("resetColorsBtn");
 
-  const initialMark1Color = getMark1Color();
-  mark1ColorPicker.jscolor.fromString(initialMark1Color);
-
-  const initialMark2Color = getMark2Color();
-  mark2ColorPicker.jscolor.fromString(initialMark2Color);
-
-  mark1ColorPicker.addEventListener("input", () => { setMark1Color(`"${mark1ColorPicker.jscolor.toHEXString()}"`) });
-  mark2ColorPicker.addEventListener("input", () => { setMark2Color(`"${mark2ColorPicker.jscolor.toHEXString()}"`) });
-  resetColorsBtn.addEventListener("click", resetColors(setMark1Color, setMark2Color));
+  if(mark1ColorPicker && mark2ColorPicker && resetColorsBtn) {
+    mark1ColorPicker.jscolor.fromString(getMark1Color());
+    mark2ColorPicker.jscolor.fromString(getMark2Color());
+  
+    mark1ColorPicker.addEventListener("input", () => { setMark1Color(mark1ColorPicker.jscolor.toHEXString()) });
+    mark2ColorPicker.addEventListener("input", () => { setMark2Color(mark2ColorPicker.jscolor.toHEXString()) });
+    resetColorsBtn.addEventListener("click", resetColors(setMark1Color, setMark2Color));
+  }
 });
 
 function onSetMark1Color(mark1Color) {

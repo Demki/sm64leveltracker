@@ -53,6 +53,8 @@ body {
   display:grid;
   grid-template-columns: 1fr;
   grid-gap: 3px;
+  border-radius: 8px 8px 0;
+  margin-bottom: 8px;
 }
 
 #content > svg {
@@ -89,6 +91,8 @@ body {
   overflow: auto;
   padding: 10px;
   border: 1px solid var(--midColor);
+  border-radius: 8px 8px 0;
+  margin-bottom: 8px;
 }
 
 #others {
@@ -109,7 +113,7 @@ body {
   grid-template-columns: subgrid;
   grid-auto-rows: 1fr;
   grid-column: 1/-1;
-  grid-gap: 5px;
+  grid-gap: 8px;
 
   margin: 3px 0px;
 }
@@ -120,6 +124,7 @@ body {
 }
 
 .item {
+  border-radius: 4px;
   padding: 3px;
   transition: background-color .250s ease-in, color .250s ease-in;
   cursor: default;
@@ -173,6 +178,7 @@ div[data-looping="yes"]::after {
 input {
   color: var(--foreground);
   background-color: var(--buttonBGColor);
+  border-radius: 8px;
 }
 
 #colors {
