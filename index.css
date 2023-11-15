@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&family=Noto+Emoji&display=swap');
+
 body {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(0, 0%, 0%);
@@ -81,7 +83,7 @@ body {
 }
 
 #toggles {
-  margin-top: 2px;
+  margin-top: 8px;
 }
 
 #display {
@@ -182,18 +184,23 @@ input {
 }
 
 #colors {
-  margin-top: 5px;
+  margin-top: 8px;
 }
 #colors input[data-jscolor] {
   width: 60px;
 }
 
+#starSymbol {
+  font-family: 'Noto Color Emoji', sans-serif;
+}
+
 #starCounter {
-  margin: 3px 0;
-  padding: 3px;
+  margin-bottom: 8px;
+  padding: 8px;
   border: 1px solid var(--midColor);
   width: fit-content;
   font-size: 200%;
+  border-radius: 8px;
 }
 
 #starCountIncrements {
