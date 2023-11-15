@@ -1,3 +1,5 @@
+@import url('./NotoColorEmoji.css');
+
 body {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(0, 0%, 0%);
@@ -53,6 +55,16 @@ body {
   display:grid;
   grid-template-columns: 1fr;
   grid-gap: 3px;
+  border-radius: 8px 8px 0;
+  margin-bottom: 8px;
+}
+
+#content > svg {
+  position: absolute;
+  z-index: 9;
+  left: 0;
+  top: 0;
+  pointer-events: none;
 }
 
 .path {
@@ -71,7 +83,7 @@ body {
 }
 
 #toggles {
-  margin-top: 2px;
+  margin-top: 8px;
 }
 
 #display {
@@ -81,6 +93,8 @@ body {
   overflow: auto;
   padding: 10px;
   border: 1px solid var(--midColor);
+  border-radius: 8px 8px 0;
+  margin-bottom: 8px;
 }
 
 #others {
@@ -101,26 +115,26 @@ body {
   grid-template-columns: subgrid;
   grid-auto-rows: 1fr;
   grid-column: 1/-1;
-  grid-gap: 4px;
+  grid-gap: 8px;
 
   margin: 3px 0px;
 }
 
 .item:hover {
-  border: 2px solid var(--hoverColor);
-  margin: -1px;
+  outline: 2px solid var(--hoverColor);
+
 }
 
 .item {
+  border-radius: 2px;
   padding: 3px;
-  display: block;
   transition: background-color .250s ease-in, color .250s ease-in;
   cursor: default;
   -moz-user-select: none;
   -webkit-user-select: none;
   -ms-user-select: none;
   user-select: none;
-  border: 1px solid var(--foreground);
+  outline: 1px solid var(--foreground);
   box-sizing: border-box;
 }
 
@@ -129,6 +143,7 @@ body {
   color: var(--color1FG);
   text-shadow: 0 0 3px var(--color1Shadow);
   font-weight: bold;
+  padding: 2.5px;
   counter-increment: picked1;
 }
 
@@ -137,11 +152,16 @@ body {
   color: var(--color2FG);
   text-shadow: 0 0 3px var(--color2Shadow);
   font-weight: bold;
+  padding: 2.5px;
   counter-increment: picked2;
 }
 
-div[data-looping^="yes"]::after {
+div[data-looping="yes"]::after {
   content: "↩";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
 }
 
 #arrowhead {
@@ -160,21 +180,27 @@ div[data-looping^="yes"]::after {
 input {
   color: var(--foreground);
   background-color: var(--buttonBGColor);
+  border-radius: 8px;
 }
 
 #colors {
-  margin-top: 5px;
+  margin-top: 8px;
 }
 #colors input[data-jscolor] {
   width: 60px;
 }
 
+#starSymbol {
+  font-family: 'Noto Color Emoji', sans-serif;
+}
+
 #starCounter {
-  margin: 3px 0;
-  padding: 3px;
+  margin-bottom: 8px;
+  padding: 8px;
   border: 1px solid var(--midColor);
   width: fit-content;
   font-size: 200%;
+  border-radius: 8px;
 }
 
 #starCountIncrements {

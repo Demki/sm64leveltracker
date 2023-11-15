@@ -1,31 +1,30 @@
 function* dropUntilInc(f, xs) {
-  let b = false;
+  let conditionMet = false;
   for(const x of xs) 
   {
-    if(!b && f(x)) {
-      b = true;
+    if(!conditionMet && f(x)) {
+      conditionMet = true;
     }
-    if(b) {
+    if(conditionMet) {
       yield x;
     }
   }
 }
 
 function* dropUntilExc(f, xs) {
-  let b = false;
+  let conditionMet = false;
   for(const x of xs) 
   {
-    if(b) {
+    if(conditionMet) {
       yield x;
     }
-    if(!b && f(x)) {
-      b = true;
+    if(!conditionMet && f(x)) {
+      conditionMet = true;
     }
   }
 }
 
 function* takeUntilExc(f, xs) {
-  let b = false;
   for(const x of xs) 
   {
     if(f(x)) {
@@ -36,7 +35,6 @@ function* takeUntilExc(f, xs) {
 }
 
 function* takeUntilInc(f, xs) {
-  let b = false;
   for(const x of xs) 
   {
     yield x;

@@ -1,133 +1,246 @@
-// this whole thing is an ugly hack and needs to be refactored some day
+const CLASSES = Object.freeze({
+  PeventConnection: "nocon",
+  Item: "item",
+  ColorPrefix: "color",
+  Path: "path",
+});
 
-const LEFT_MOUSE_BUTTON = 0;
-const MIDDLE_MOUSE_BUTTON = 1;
-const RIGHT_MOUSE_BUTTON = 2;
+const IDS = Object.freeze({
+  ItemPrefix: "item",
+  // TODO: extract the rest of the ids...
+})
 
-const CONNECT_BUTTON = LEFT_MOUSE_BUTTON;
-const MARK_1_BUTTON = RIGHT_MOUSE_BUTTON;
-const MARK_2_BUTTON = MIDDLE_MOUSE_BUTTON;
+const BUTTONS = Object.freeze({
+  Left: 0,
+  Middle: 1,
+  Right: 2
+});
+
+const MODIFIERS = Object.freeze({
+  None: 0,
+  Ctrl: 4,
+  Shift: 8,
+  Alt: 16,
+});
+
+const ACTIONS = Object.freeze({
+  Connect: 0,
+  ConnectSelf: 1,
+  Disconnect: 2,
+  Mark1: 3,
+  Mark2: 4,
+});
+
+const ACTIONS_KEY_MAPPING = Object.freeze({
+  [BUTTONS.Left   | MODIFIERS.None]: ACTIONS.Connect,
+  [BUTTONS.Left   | MODIFIERS.Ctrl]: ACTIONS.ConnectSelf,
+  [BUTTONS.Middle | MODIFIERS.Ctrl]: ACTIONS.Disconnect,
+  [BUTTONS.Right  | MODIFIERS.None]: ACTIONS.Mark1,
+  [BUTTONS.Middle | MODIFIERS.None]: ACTIONS.Mark2,
+});
+
+/**
+ * @template T
+ * @typedef {T[keyof T]} ValueOf - because why not 
+ */
+
+const DRAG_STATES = Object.freeze({
+  None: 0,
+  Dragging: 1
+});
+
+/**
+ * @typedef {{
+*       lineElement: SVGPathElement, 
+*       originalElement: HTMLElement,
+*       startX: number, 
+*       startY: number, 
+*       endX: number, 
+*       endY: number
+*     }} DragInfo
+ * @typedef {{
+ *   dragState: typeof DRAG_STATES.None, 
+ *   dragInfo: undefined
+ * } | {
+ *   dragState: typeof DRAG_STATES.Dragging,
+ *   dragInfo: DragInfo
+ * }} DndState
+ * @type {DndState}
+ */
+const global_dnd_state = Object.seal({
+  dragState: DRAG_STATES.None,
+  dragInfo: undefined,
+});
+
+const NOOP = () => {};
+
+/**
+ * @param {DragInfo} dragInfo
+ */
+function setPathLineDAttribute({lineElement, startX, startY, endX, endY}) {
+  lineElement.setAttribute('d', `M${startX},${startY} L${endX},${endY}`);
+}
+
+/**
+ * @param {Pick<MouseEvent, 'clientX' | 'clientY' | 'currentTarget'>} ev
+ */
+function getMouseOffset({clientX, clientY, currentTarget}) {
+  const rect = currentTarget.getBoundingClientRect();
+  const offsetX = clientX - rect.left;
+  const offsetY = clientY - rect.top;
+  return { offsetX, offsetY };
+}
+
+/**
+ * @param {MouseEvent} ev 
+ */
+function connectStart({ target, clientX, clientY, currentTarget }) {
+  if(!target.classList.contains(CLASSES.Item) || target.classList.contains(CLASSES.PeventConnection)) {
+    return;
+  }
+  const { offsetLeft, offsetTop, offsetWidth, offsetHeight } = target;
+  const gEl = document.getElementById('connectingLine');
+  const { offsetX, offsetY } = getMouseOffset({ clientX, clientY, currentTarget });
+  while(gEl.firstChild) {
+    gEl.firstChild.remove();
+  }
+  const lineElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  gEl.appendChild(lineElement);
+  global_dnd_state.dragInfo = {
+    startX: offsetLeft + offsetWidth / 2,
+    startY: offsetTop + offsetHeight / 2,
+    endX: offsetX,
+    endY: offsetY,
+    lineElement,
+    originalElement: target
+  }
+  global_dnd_state.dragState = DRAG_STATES.Dragging;
+  setPathLineDAttribute(global_dnd_state.dragInfo);
+}
+
+/**
+ * @param {MouseEvent} ev 
+ */
+function connectWhile(ev) {
+  if(global_dnd_state.dragState === DRAG_STATES.Dragging) {
+    const { offsetX, offsetY } = getMouseOffset(ev);
+    global_dnd_state.dragInfo.endX = offsetX;
+    global_dnd_state.dragInfo.endY = offsetY;
+    setPathLineDAttribute(global_dnd_state.dragInfo);
+  }
+}
+
+/**
+ * @param {boolean} connectSelf
+ * @returns {(ev: MouseEvent) => void}
+ */
+function connectEnd(connectSelf) {
+  return ({ target }) => {
+    if(global_dnd_state.dragState !== DRAG_STATES.Dragging) {
+      return;
+    }
+    global_dnd_state.dragInfo.lineElement.remove();
+
+    const shouldConnectSelf = connectSelf && target === global_dnd_state.dragInfo.originalElement && !isPath(target.parentElement);
+    const shouldConnect = target.classList.contains(CLASSES.Item) 
+      && !target.classList.contains(CLASSES.PeventConnection) 
+      && (target !== global_dnd_state.dragInfo.originalElement);
+    if(shouldConnectSelf) {
+      const newPath = document.createElement("div");
+      newPath.classList.add(CLASSES.Path);
+      newPath.dataset.looping = "yes";
+      document.getElementById("main").insertBefore(newPath, target.parentElement);
+      newPath.append(target);
+    } else if(shouldConnect) {
+      connect(global_dnd_state.dragInfo.originalElement, target);
+    }
+    updateWindow();
+
+    global_dnd_state.dragState = DRAG_STATES.None;
+    global_dnd_state.dragInfo = undefined;
+  }
+}
+
+/**
+ * @type {{
+*  [P in ValueOf<typeof ACTIONS>]: 
+*    {start?: (MouseEvent) => void, while?: (MouseEvent) => void, end: (MouseEvent) => void}
+* }}
+*/
+const ACTIONS_CALLBACKS = {
+  [ACTIONS.Connect]: 
+    {start: connectStart,
+    while: connectWhile, 
+    end: connectEnd(false)},
+  [ACTIONS.ConnectSelf]: 
+    {start: connectStart,
+    while: connectWhile, 
+    end: connectEnd(true)},
+  [ACTIONS.Disconnect]: 
+    {end: disconnect},
+  [ACTIONS.Mark1]: 
+    {end: mark(1)},
+  [ACTIONS.Mark2]: 
+    {end: mark(2)},
+}
 
 const DEFAULT_STAR_COUNT = 70;
 
 function mark(v) {
-  return (ev) => {
-    m(ev.target);
-    function m(target) {
+  return ({target}) => {
+    if(target.classList.contains(CLASSES.Item)){
       const mark = target.dataset.mark;
-      const newMark = target.dataset.mark === v ? '0' : v;
-      if (!target.classList.replace(`color${mark}`, `color${newMark}`)) {
-        target.classList.add(`color${newMark}`);
+      const newMark = target.dataset.mark === `${v}` ? '0' : v;
+      if (!target.classList.replace(`${CLASSES.ColorPrefix}${mark}`, `${CLASSES.ColorPrefix}${newMark}`)) {
+        target.classList.add(`${CLASSES.ColorPrefix}${newMark}`);
       }
       target.dataset.mark = newMark;
     }
   }
 }
 
-let state = 'none';
-let prev = null;
-let dragLine = {};
-let nightMode = false;
-let shortMode = false;
-let hiddenBitS = false;
-let hiddenOthers = false;
-let shownTips = false;
-
 const MARK_1_DEFAULT = "#da1b1b"
 const MARK_2_DEFAULT = "#118d11"
 
-let mark1Color = MARK_1_DEFAULT;
-let mark2Color = MARK_2_DEFAULT;
-
-function createLine({ layerX, layerY, offsetX, offsetY, target: { offsetWidth, offsetHeight } }) {
-  const startX = layerX - offsetX + offsetWidth / 2;
-  const startY = layerY - offsetY + offsetHeight / 2;
-  const gEl = document.getElementById('connectingLine');
-
-  dragLine.startX = startX;
-  dragLine.startY = startY;
-  gEl.innerHTML = `<path/>`;
-  dragLine.element = gEl.children[0];
-  updateLine(layerX, layerY);
-}
-
-function updateLine(x, y) {
-  if (dragLine.element) {
-    dragLine.endX = x;
-    dragLine.endY = y;
-    dragLine.element.setAttribute('d', `M${dragLine.startX},${dragLine.startY} L${dragLine.endX},${dragLine.endY}`);
-  }
-}
-
-function removeLine() {
-  dragLine.element.remove();
-  dragLine = {};
-}
-
+/**
+ * 
+ * @param {MouseEvent} ev 
+ */
 function mousedown(ev) {
-  if(ev.button === MIDDLE_MOUSE_BUTTON) ev.preventDefault(); // prevent scroll toggle with middle mouse button
-  if (ev.target.classList.contains("item")) {
-    prev = ev.target;
-    if (!ev.target.classList.contains('nocon')) {
-      switch (ev.button) {
-        case CONNECT_BUTTON:
-          state = 'connecting';
-          createLine(ev);
-          break;
-      }
-    }
-  }
+  if(ev.button === BUTTONS.Middle) ev.preventDefault(); // prevent scroll toggle with middle mouse button
+  const button = ev.button;
+  const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl)
+                  | (ev.shiftKey && MODIFIERS.Shift)
+                  | (ev.altKey && MODIFIERS.Alt);
+  const modifiedButton = button | modifiers;
+  ACTIONS_CALLBACKS[ACTIONS_KEY_MAPPING[modifiedButton]]?.start?.(ev);
 }
 
 function mousemove(ev) {
-  if (state === 'connecting') {
-    updateLine(ev.layerX, ev.layerY);
-  }
+  const button = ev.button;
+  const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl)
+                  | (ev.shiftKey && MODIFIERS.Shift)
+                  | (ev.altKey && MODIFIERS.Alt);
+  const modifiedButton = button | modifiers;
+  ACTIONS_CALLBACKS[ACTIONS_KEY_MAPPING[modifiedButton]]?.while?.(ev);
 }
 
 function mouseup(ev) {
-  let prevState = state;
-  state = 'none';
-  const target = ev.target;
-  if (prevState === 'connecting') {
-    removeLine();
-    if (target.classList.contains('nocon')) prevState = 'none';
-  }
-  if (target.classList.contains("item")) {
-    if (ev.ctrlKey && prevState === 'connecting' && target === prev && !isPath(target.parentElement) && !target.classList.contains('nocon')) {
-      let newPath = document.createElement("div");
-      newPath.classList.add("path");
-      newPath.dataset.looping = "yes";
-      document.getElementById("main").insertBefore(newPath, prev.parentElement);
-      newPath.append(prev);
-    }
-    else if (prevState !== 'connecting' && target === prev) {
-      if (ev.button === MARK_1_BUTTON) mark('1')(ev);
-      if (ev.button === MARK_2_BUTTON) {
-        if (ev.ctrlKey) {
-          disconnect(target);
-        }
-        else {
-          mark('2')(ev);
-        }
-      }
-    }
-    else if (prevState === 'connecting' && target !== prev) {
-      connect(target);
-    }
-  }
-  updateWindow();
-  prev = null;
+  const button = ev.button;
+  const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl)
+                  | (ev.shiftKey && MODIFIERS.Shift)
+                  | (ev.altKey && MODIFIERS.Alt);
+  const modifiedButton = button | modifiers;
+  ACTIONS_CALLBACKS[ACTIONS_KEY_MAPPING[modifiedButton]]?.end?.(ev);
 }
 
 function isPath(p) {
-  return p.classList.contains("path");
+  return p.classList.contains(CLASSES.Path);
 }
 
 function createPath(startPath, ...ls) {
   const newPath = document.createElement("div");
-  newPath.classList.add("path");
-  newPath.dataset.looping = "no";
+  newPath.classList.add(CLASSES.Path);
   newPath.append(...ls);
   addPath(newPath, startPath);
   return newPath;
@@ -140,14 +253,16 @@ function addPath(newPath, startPath) {
 }
 
 function dumpToList(...ls) {
-  document.getElementById("list").append(...ls);
+  const list = document.getElementById("list");
+  list.append(...ls);
+  list.append(...Array.from(list.children).sort((a, b) => Number(a.id.substring(IDS.ItemPrefix.length)) - Number(b.id.substring(IDS.ItemPrefix.length))));
 }
 
-function disconnect(target) {
+function disconnect({target}) {
   const targetPath = target.parentElement;
   if (!isPath(targetPath)) return;
-  targetPath.dataset.looping = "no";
-  if (prev.nextElementSibling !== null) {
+  delete targetPath.dataset.looping;
+  if (target.nextElementSibling !== null) {
     const afterTarget = [...dropUntilExc(x => x === target, targetPath.children)];
     if (afterTarget.length > 1) {
       createPath(targetPath, ...afterTarget);
@@ -160,9 +275,10 @@ function disconnect(target) {
     dumpToList(...targetPath.children);
     targetPath.remove();
   }
+  updateWindow();
 }
 
-function connect(target) {
+function connect(prev, target) {
 
   let prevPath = prev.parentElement;
   const targetPath = target.parentElement;
@@ -178,7 +294,7 @@ function connect(target) {
     prevPath = createPath(null, prev);
   }
 
-  prevPath.dataset.looping = "no";
+  delete prevPath.dataset.looping;
 
   if (prev.nextElementSibling !== null) {
     const afterPrev = [...dropUntilExc(x => x === prev, prevPath.children)];
@@ -195,7 +311,7 @@ function connect(target) {
     return;
   }
 
-  targetPath.dataset.looping = "no";
+  delete targetPath.dataset.looping;
 
   if (target.previousElementSibling !== null) {
     const beforeTarget = [...takeUntilExc(x => x === target, targetPath.children)];
@@ -217,24 +333,12 @@ function connect(target) {
 function updateWindow() {
   const dWindow = document.getElementById("display");
   dWindow.innerHTML = "<div style='overflow-wrap: break-word'>" +
-      Array.from(document.getElementById("main").children).filter(x => x.classList.contains("path")).map((p) => {
+      Array.from(document.getElementById("main").children).filter(x => x.classList.contains(CLASSES.Path)).map((p) => {
         let result = Array.from(p.children).map(c => c.dataset.short + (c.dataset.mark === '1' ? '*' : c.dataset.mark === '2' ? '(*)' : '')).join("<wbr>→<wbr>");
         if (p.dataset.looping === "yes") result += "↩";
         return `<div class="dpath">${result}</div>`
       }).join(" ")
       + "</div>";
-}
-
-function toggleDisplay() {
-  const clist = document.getElementById("display").classList;
-  clist.toggle("hidden");
-  localStorage.setItem("displayVisible", !clist.contains("hidden"));
-}
-
-function toggleStarCounter() {
-  const clist = document.getElementById("starCounter").classList;
-  clist.toggle("hidden");
-  localStorage.setItem("starCounterVisible", !clist.contains("hidden"));
 }
 
 window.addEventListener("load", () => {
@@ -246,146 +350,129 @@ window.addEventListener("load", () => {
 
   let i = 0;
   for (const child of document.getElementById("list").children) {
-    child.classList.add("item");
-    child.classList.add("color0");
-    child.id = "item" + i;
+    child.classList.add(CLASSES.Item);
+    child.classList.add(`${CLASSES.ColorPrefix}0`);
+    child.id = IDS.ItemPrefix + i;
     i++;
     child.dataset.mark = '0';
   }
 
   for (const child of document.getElementById("others").children) {
-    child.classList.add("nocon");
-    child.classList.add("item");
-    child.classList.add("color0");
-    child.id = "item" + i;
+    child.classList.add(CLASSES.PeventConnection);
+    child.classList.add(CLASSES.Item);
+    child.classList.add(`${CLASSES.ColorPrefix}0`);
+    child.id = IDS.ItemPrefix + i;
     i++;
     child.dataset.mark = '0';
   }
 
-  const incrementStarCountBtn = document.getElementById("incrementStarCountBtn");
-  if(incrementStarCountBtn) incrementStarCountBtn.addEventListener("click", incrementStarCount);
-  const decrementStarCountBtn = document.getElementById("decrementStarCountBtn");
-  if(decrementStarCountBtn) decrementStarCountBtn.addEventListener("click", decrementStarCount);
+  const [getNightMode, setNightMode]                  = localStorageState("nightMode", true, onSetNight);
+  const [getShortMode, setShortMode]                  = localStorageState("shortMode", false, onSetShort);
+  const [getHiddenBitS, setHiddenBitS]                = localStorageState("hiddenBitS", false, onSetHiddenBitS);
+  const [getHiddenOthers, setHiddenOthers]            = localStorageState("hiddenOthers", false, onSetHiddenOthers);
+  const [getShownTips, setShownTips]                  = localStorageState("shownTips", false, onSetShownTips);
+  const [getDisplayVisible, setDisplayVisible]        = localStorageState("displayVisible", false, onSetDisplayVisible);
+  const [getStarCounterVisible,setStarCounterVisible] = localStorageState("starCounterVisible", false, onSetStarCounterVisible);
+  const [getDisplayWidth, setDisplayWidth]            = localStorageState("displayWidth", '300px', undefined, identity, identity);
+  const [getDisplayHeight, setDisplayHeight]          = localStorageState("displayHeight", '200px', undefined, identity, identity);
+  const [getContentWidth, setContentWidth]            = localStorageState("contentWidth", '800px', undefined, identity, identity);
+  const [getContentHeight, setContentHeight]          = localStorageState("contentHeight", '400px', undefined, identity, identity);
+  const [getMark1Color, setMark1Color]                = localStorageState("mark1Color", MARK_1_DEFAULT, onSetMark1Color, identity, identity);
+  const [getMark2Color, setMark2Color]                = localStorageState("mark2Color", MARK_2_DEFAULT, onSetMark2Color, identity, identity);
 
-  const starCounterBtn = document.getElementById("starCounterBtn");
-  if (starCounterBtn) starCounterBtn.addEventListener("click", toggleStarCounter);
-  const displayBtn = document.getElementById("displayBtn");
-  if (displayBtn) displayBtn.addEventListener("click", toggleDisplay);
-  const nightBtn = document.getElementById("nightBtn");
-  if (nightBtn) nightBtn.addEventListener("click", toggleNightMode);
-  const shortBtn = document.getElementById("shortBtn");
-  if (shortBtn) shortBtn.addEventListener("click", toggleShort);
-  const toggleOthersBtn = document.getElementById("toggleOthersBtn");
-  if (toggleOthersBtn) toggleOthersBtn.addEventListener("click", toggleOthers);
-  const toggleBitSBtn = document.getElementById("toggleBitSBtn");
-  if (toggleBitSBtn) toggleBitSBtn.addEventListener("click", toggleBitS);
-  const toggleTipsBtn = document.getElementById("toggleTipsBtn");
-  if (toggleTipsBtn) toggleTipsBtn.addEventListener("click", toggleTips);
-
-  nightMode = (localStorage.getItem("nightMode") || "true") === "true";
-  shortMode = localStorage.getItem("shortMode") === "true";
-  hiddenBitS = localStorage.getItem("hiddenBitS") === "true";
-  hiddenOthers = localStorage.getItem("hiddenOthers") === "true";
-  shownTips = localStorage.getItem("shownTips") === "true";
-  if (nightMode) document.body.classList.add("nightMode");
-  setShort(shortMode);
-  setHiddenBitS(hiddenBitS);
-  setHiddenOthers(hiddenOthers);
-  setShownTips(shownTips);
-
-  if(JSON.parse(localStorage.getItem("displayVisible"))) toggleDisplay();
-  if(JSON.parse(localStorage.getItem("starCounterVisible"))) toggleStarCounter();
+  const contentDiv = document.getElementById("content");
+  contentDiv.style.setProperty("width", getContentWidth());
+  contentDiv.style.setProperty("height", getContentHeight());
 
   const displayDiv = document.getElementById("display");
-  const contentDiv = document.getElementById("content");
+  displayDiv.style.setProperty("width", getDisplayWidth());
+  displayDiv.style.setProperty("height", getDisplayHeight());
 
   const displaySizeObserver = new MutationObserver(() => 
   {
-    localStorage.setItem("displayWidth", displayDiv.style.width);
-    localStorage.setItem("displayHeight", displayDiv.style.height);
+    setDisplayWidth(displayDiv.style.width);
+    setDisplayHeight(displayDiv.style.height);
   });
 
   const contentSizeObserver = new MutationObserver(() => 
   {
-    localStorage.setItem("contentWidth", contentDiv.style.width);
-    localStorage.setItem("contentHeight", contentDiv.style.height);
+    setContentWidth(contentDiv.style.width);
+    setContentHeight(contentDiv.style.height);
   });
 
   displaySizeObserver.observe(displayDiv, {attributes: true, attributeFilter: ["style"]});
-
   contentSizeObserver.observe(contentDiv, {attributes: true, attributeFilter: ["style"]});
 
-  if(localStorage.getItem("displayWidth") && localStorage.getItem("displayHeight"))
-  {
-    displayDiv.style.setProperty("width", localStorage.getItem("displayWidth"));
-    displayDiv.style.setProperty("height", localStorage.getItem("displayHeight"));
-  }
-  
-  if(localStorage.getItem("contentWidth") && localStorage.getItem("contentHeight"))
-  {
-    contentDiv.style.setProperty("width", localStorage.getItem("contentWidth"));
-    contentDiv.style.setProperty("height", localStorage.getItem("contentHeight"));
-  }
-  
-  if(localStorage.getItem("mark1Color"))
-  {
-    mark1Color = localStorage.getItem("mark1Color");
-  }
-
-  if(localStorage.getItem("mark2Color"))
-  {
-    mark2Color = localStorage.getItem("mark2Color");
-  }
+  document.getElementById("starCounterBtn" )?.addEventListener?.("click", toggleStateCallback(getStarCounterVisible, setStarCounterVisible));
+  document.getElementById("displayBtn"     )?.addEventListener?.("click", toggleStateCallback(getDisplayVisible    , setDisplayVisible    ));
+  document.getElementById("nightBtn"       )?.addEventListener?.("click", toggleStateCallback(getNightMode         , setNightMode         ));
+  document.getElementById("shortBtn"       )?.addEventListener?.("click", toggleStateCallback(getShortMode         , setShortMode         ));
+  document.getElementById("toggleOthersBtn")?.addEventListener?.("click", toggleStateCallback(getHiddenOthers      , setHiddenOthers      ));
+  document.getElementById("toggleBitSBtn"  )?.addEventListener?.("click", toggleStateCallback(getHiddenBitS        , setHiddenBitS        ));
+  document.getElementById("toggleTipsBtn"  )?.addEventListener?.("click", toggleStateCallback(getShownTips         , setShownTips         ));
+  document.getElementById("incrementStarCountBtn")?.addEventListener("click", incrementStarCount);
+  document.getElementById("decrementStarCountBtn")?.addEventListener("click", decrementStarCount);
 
   const mark1ColorPicker = document.getElementById("mark1ColorPicker");
   const mark2ColorPicker = document.getElementById("mark2ColorPicker");
   const resetColorsBtn   = document.getElementById("resetColorsBtn");
 
-  mark1ColorPicker.jscolor.fromString(mark1Color);
-  document.body.style.setProperty("--color1BG", mark1Color);
-
-  mark2ColorPicker.jscolor.fromString(mark2Color);
-  document.body.style.setProperty("--color2BG", mark2Color);
-
-  mark1ColorPicker.addEventListener("input", setMark1Color);
-  mark2ColorPicker.addEventListener("input", setMark2Color);
-  resetColorsBtn.addEventListener("click", resetColors);
+  if(mark1ColorPicker && mark2ColorPicker && resetColorsBtn) {
+    mark1ColorPicker.jscolor.fromString(getMark1Color());
+    mark2ColorPicker.jscolor.fromString(getMark2Color());
+  
+    mark1ColorPicker.addEventListener("input", () => { setMark1Color(mark1ColorPicker.jscolor.toHEXString()) });
+    mark2ColorPicker.addEventListener("input", () => { setMark2Color(mark2ColorPicker.jscolor.toHEXString()) });
+    resetColorsBtn.addEventListener("click", resetColors(setMark1Color, setMark2Color));
+  }
 });
 
-function setMark1Color() {
-  mark1Color = document.getElementById("mark1ColorPicker").jscolor.toHEXString();
-  localStorage.setItem("mark1Color", mark1Color);
+function onSetMark1Color(mark1Color) {
   document.body.style.setProperty("--color1BG", mark1Color);
 }
 
-function setMark2Color() {
-  mark2Color = document.getElementById("mark2ColorPicker").jscolor.toHEXString();
-  localStorage.setItem("mark2Color", mark2Color);
+function onSetMark2Color(mark2Color) {
   document.body.style.setProperty("--color2BG", mark2Color);
 }
 
-function resetColors(mark1ColorPicker, mark2ColorPicker) { 
-  document.getElementById("mark1ColorPicker").jscolor.fromString(MARK_1_DEFAULT);
-  document.getElementById("mark2ColorPicker").jscolor.fromString(MARK_2_DEFAULT);
-  setMark1Color();
-  setMark2Color();
+function resetColors(setMark1Color, setMark2Color) {
+  return () => {
+    document.getElementById("mark1ColorPicker").jscolor.fromString(MARK_1_DEFAULT);
+    document.getElementById("mark2ColorPicker").jscolor.fromString(MARK_2_DEFAULT);
+    setMark1Color(MARK_1_DEFAULT);
+    setMark2Color(MARK_2_DEFAULT);
+  } 
 }
 
-function toggleNightMode() {
-  if (nightMode) {
-    nightMode = false;
-    localStorage.setItem("nightMode", nightMode);
+
+function onSetDisplayVisible(displayVisible) {
+  const clist = document.getElementById("display").classList;
+  if(displayVisible) {
+    clist.remove("hidden");
+  } else {
+    clist.add("hidden");
+  }
+}
+
+function onSetStarCounterVisible(startCounterVisible) {
+  const clist = document.getElementById("starCounter").classList;
+  if(startCounterVisible) {
+    clist.remove("hidden");
+  } else {
+    clist.add("hidden");
+  }
+}
+
+function onSetNight(nightMode) {
+  if (!nightMode) {
     document.body.classList.remove("nightMode");
   }
   else {
-    nightMode = true;
-    localStorage.setItem("nightMode", nightMode);
     document.body.classList.add("nightMode");
-  }
-  updateWindow();
+  }  
 }
 
-function setShort(sm) {
+function onSetShort(sm) {
 
   for (const child of [...document.getElementById("main").children].filter(x => !x.id.startsWith("count")).flatMap(x => [...x.children])) {
     if (!("long" in child.dataset)) {
@@ -404,19 +491,7 @@ function setShort(sm) {
   }
 }
 
-function toggleShort() {
-  if (shortMode) {
-    shortMode = false;
-    localStorage.setItem("shortMode", shortMode);
-  }
-  else {
-    shortMode = true;
-    localStorage.setItem("shortMode", shortMode);
-  }
-  setShort(shortMode);
-}
-
-function setHiddenBitS(hBS) {
+function onSetHiddenBitS(hBS) {
   const bitS = document.querySelector("div[data-short=BitS]");
   if(hBS)
   {
@@ -430,7 +505,7 @@ function setHiddenBitS(hBS) {
   }
 }
 
-function setHiddenOthers(hOthers) {
+function onSetHiddenOthers(hOthers) {
   const others = document.getElementById("others");
   if(hOthers)
   {
@@ -444,31 +519,7 @@ function setHiddenOthers(hOthers) {
   }
 }
 
-function toggleBitS() {
-  if (hiddenBitS) {
-    hiddenBitS = false;
-    localStorage.setItem("hiddenBitS", hiddenBitS);
-  }
-  else {
-    hiddenBitS = true;
-    localStorage.setItem("hiddenBitS", hiddenBitS);
-  }
-  setHiddenBitS(hiddenBitS);
-}
-
-function toggleOthers() {
-  if (hiddenOthers) {
-    hiddenOthers = false;
-    localStorage.setItem("hiddenOthers", hiddenOthers);
-  }
-  else {
-    hiddenOthers = true;
-    localStorage.setItem("hiddenOthers", hiddenOthers);
-  }
-  setHiddenOthers(hiddenOthers);
-}
-
-function setShownTips(sTips) {
+function onSetShownTips(sTips) {
   const tips = document.getElementById("tooltips");
   if(!sTips)
   {
@@ -480,18 +531,6 @@ function setShownTips(sTips) {
     tips.classList.remove("hidden");
     document.getElementById("toggleTipsBtn").value = "hide controls";
   }
-}
-
-function toggleTips() {
-  if (shownTips) {
-    shownTips = false;
-    localStorage.setItem("shownTips", shownTips);
-  }
-  else {
-    shownTips = true;
-    localStorage.setItem("shownTips", shownTips);
-  }
-  setShownTips(shownTips);
 }
 
 function incrementStarCount() {
