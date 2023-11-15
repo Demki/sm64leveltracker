@@ -124,7 +124,7 @@ body {
 }
 
 .item {
-  border-radius: 4px;
+  border-radius: 2px;
   padding: 3px;
   transition: background-color .250s ease-in, color .250s ease-in;
   cursor: default;
