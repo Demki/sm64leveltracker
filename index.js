@@ -1,3 +1,15 @@
+const CLASSES = Object.freeze({
+  PeventConnection: "nocon",
+  Item: "item",
+  ColorPrefix: "color",
+  Path: "path",
+});
+
+const IDS = Object.freeze({
+  ItemPrefix: "item",
+  // TODO: extract the rest of the ids...
+})
+
 const BUTTONS = Object.freeze({
   Left: 0,
   Middle: 1,
@@ -83,7 +95,7 @@ function getMouseOffset({clientX, clientY, currentTarget}) {
  * @param {MouseEvent} ev 
  */
 function connectStart({ target, clientX, clientY, currentTarget }) {
-  if(!target.classList.contains("item") || target.classList.contains("nocon")) {
+  if(!target.classList.contains(CLASSES.Item) || target.classList.contains(CLASSES.PeventConnection)) {
     return;
   }
   const { offsetLeft, offsetTop, offsetWidth, offsetHeight } = target;
@@ -130,18 +142,19 @@ function connectEnd(connectSelf) {
     global_dnd_state.dragInfo.lineElement.remove();
 
     const shouldConnectSelf = connectSelf && target === global_dnd_state.dragInfo.originalElement && !isPath(target.parentElement);
-    const shouldConnect = target.classList.contains("item") 
-      && !target.classList.contains("nocon") 
+    const shouldConnect = target.classList.contains(CLASSES.Item) 
+      && !target.classList.contains(CLASSES.PeventConnection) 
       && (target !== global_dnd_state.dragInfo.originalElement);
     if(shouldConnectSelf) {
       const newPath = document.createElement("div");
-      newPath.classList.add("path");
+      newPath.classList.add(CLASSES.Path);
       newPath.dataset.looping = "yes";
       document.getElementById("main").insertBefore(newPath, target.parentElement);
       newPath.append(target);
     } else if(shouldConnect) {
       connect(global_dnd_state.dragInfo.originalElement, target);
     }
+    updateWindow();
 
     global_dnd_state.dragState = DRAG_STATES.None;
     global_dnd_state.dragInfo = undefined;
@@ -175,35 +188,26 @@ const DEFAULT_STAR_COUNT = 70;
 
 function mark(v) {
   return ({target}) => {
-    if(target.classList.contains("item")){
+    if(target.classList.contains(CLASSES.Item)){
       const mark = target.dataset.mark;
       const newMark = target.dataset.mark === `${v}` ? '0' : v;
-      if (!target.classList.replace(`color${mark}`, `color${newMark}`)) {
-        target.classList.add(`color${newMark}`);
+      if (!target.classList.replace(`${CLASSES.ColorPrefix}${mark}`, `${CLASSES.ColorPrefix}${newMark}`)) {
+        target.classList.add(`${CLASSES.ColorPrefix}${newMark}`);
       }
       target.dataset.mark = newMark;
     }
   }
 }
 
-let nightMode = false;
-let shortMode = false;
-let hiddenBitS = false;
-let hiddenOthers = false;
-let shownTips = false;
-
 const MARK_1_DEFAULT = "#da1b1b"
 const MARK_2_DEFAULT = "#118d11"
-
-let mark1Color = MARK_1_DEFAULT;
-let mark2Color = MARK_2_DEFAULT;
 
 /**
  * 
  * @param {MouseEvent} ev 
  */
 function mousedown(ev) {
-  if(ev.button === MIDDLE_MOUSE_BUTTON) ev.preventDefault(); // prevent scroll toggle with middle mouse button
+  if(ev.button === BUTTONS.Middle) ev.preventDefault(); // prevent scroll toggle with middle mouse button
   const button = ev.button;
   const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl)
                   | (ev.shiftKey && MODIFIERS.Shift)
@@ -231,13 +235,12 @@ function mouseup(ev) {
 }
 
 function isPath(p) {
-  return p.classList.contains("path");
+  return p.classList.contains(CLASSES.Path);
 }
 
 function createPath(startPath, ...ls) {
   const newPath = document.createElement("div");
-  newPath.classList.add("path");
-  newPath.dataset.looping = "no";
+  newPath.classList.add(CLASSES.Path);
   newPath.append(...ls);
   addPath(newPath, startPath);
   return newPath;
@@ -252,13 +255,13 @@ function addPath(newPath, startPath) {
 function dumpToList(...ls) {
   const list = document.getElementById("list");
   list.append(...ls);
-  list.append(...Array.from(list.children).sort((a, b) => Number(a.id.substring(4)) - Number(b.id.substring(4))));
+  list.append(...Array.from(list.children).sort((a, b) => Number(a.id.substring(IDS.ItemPrefix.length)) - Number(b.id.substring(IDS.ItemPrefix.length))));
 }
 
 function disconnect({target}) {
   const targetPath = target.parentElement;
   if (!isPath(targetPath)) return;
-  targetPath.dataset.looping = "no";
+  delete targetPath.dataset.looping;
   if (target.nextElementSibling !== null) {
     const afterTarget = [...dropUntilExc(x => x === target, targetPath.children)];
     if (afterTarget.length > 1) {
@@ -272,6 +275,7 @@ function disconnect({target}) {
     dumpToList(...targetPath.children);
     targetPath.remove();
   }
+  updateWindow();
 }
 
 function connect(prev, target) {
@@ -290,7 +294,7 @@ function connect(prev, target) {
     prevPath = createPath(null, prev);
   }
 
-  prevPath.dataset.looping = "no";
+  delete prevPath.dataset.looping;
 
   if (prev.nextElementSibling !== null) {
     const afterPrev = [...dropUntilExc(x => x === prev, prevPath.children)];
@@ -307,7 +311,7 @@ function connect(prev, target) {
     return;
   }
 
-  targetPath.dataset.looping = "no";
+  delete targetPath.dataset.looping;
 
   if (target.previousElementSibling !== null) {
     const beforeTarget = [...takeUntilExc(x => x === target, targetPath.children)];
@@ -329,24 +333,12 @@ function connect(prev, target) {
 function updateWindow() {
   const dWindow = document.getElementById("display");
   dWindow.innerHTML = "<div style='overflow-wrap: break-word'>" +
-      Array.from(document.getElementById("main").children).filter(x => x.classList.contains("path")).map((p) => {
+      Array.from(document.getElementById("main").children).filter(x => x.classList.contains(CLASSES.Path)).map((p) => {
         let result = Array.from(p.children).map(c => c.dataset.short + (c.dataset.mark === '1' ? '*' : c.dataset.mark === '2' ? '(*)' : '')).join("<wbr>→<wbr>");
         if (p.dataset.looping === "yes") result += "↩";
         return `<div class="dpath">${result}</div>`
       }).join(" ")
       + "</div>";
-}
-
-function toggleDisplay() {
-  const clist = document.getElementById("display").classList;
-  clist.toggle("hidden");
-  localStorage.setItem("displayVisible", !clist.contains("hidden"));
-}
-
-function toggleStarCounter() {
-  const clist = document.getElementById("starCounter").classList;
-  clist.toggle("hidden");
-  localStorage.setItem("starCounterVisible", !clist.contains("hidden"));
 }
 
 window.addEventListener("load", () => {
@@ -358,18 +350,18 @@ window.addEventListener("load", () => {
 
   let i = 0;
   for (const child of document.getElementById("list").children) {
-    child.classList.add("item");
-    child.classList.add("color0");
-    child.id = "item" + i;
+    child.classList.add(CLASSES.Item);
+    child.classList.add(`${CLASSES.ColorPrefix}0`);
+    child.id = IDS.ItemPrefix + i;
     i++;
     child.dataset.mark = '0';
   }
 
   for (const child of document.getElementById("others").children) {
-    child.classList.add("nocon");
-    child.classList.add("item");
-    child.classList.add("color0");
-    child.id = "item" + i;
+    child.classList.add(CLASSES.PeventConnection);
+    child.classList.add(CLASSES.Item);
+    child.classList.add(`${CLASSES.ColorPrefix}0`);
+    child.id = IDS.ItemPrefix + i;
     i++;
     child.dataset.mark = '0';
   }
@@ -379,125 +371,112 @@ window.addEventListener("load", () => {
   const decrementStarCountBtn = document.getElementById("decrementStarCountBtn");
   if(decrementStarCountBtn) decrementStarCountBtn.addEventListener("click", decrementStarCount);
 
-  const starCounterBtn = document.getElementById("starCounterBtn");
-  if (starCounterBtn) starCounterBtn.addEventListener("click", toggleStarCounter);
-  const displayBtn = document.getElementById("displayBtn");
-  if (displayBtn) displayBtn.addEventListener("click", toggleDisplay);
-  const nightBtn = document.getElementById("nightBtn");
-  if (nightBtn) nightBtn.addEventListener("click", toggleNightMode);
-  const shortBtn = document.getElementById("shortBtn");
-  if (shortBtn) shortBtn.addEventListener("click", toggleShort);
-  const toggleOthersBtn = document.getElementById("toggleOthersBtn");
-  if (toggleOthersBtn) toggleOthersBtn.addEventListener("click", toggleOthers);
-  const toggleBitSBtn = document.getElementById("toggleBitSBtn");
-  if (toggleBitSBtn) toggleBitSBtn.addEventListener("click", toggleBitS);
-  const toggleTipsBtn = document.getElementById("toggleTipsBtn");
-  if (toggleTipsBtn) toggleTipsBtn.addEventListener("click", toggleTips);
+  const [getNightMode, setNightMode]                  = localStorageState("nightMode", true, onSetNight);
+  const [getShortMode, setShortMode]                  = localStorageState("shortMode", false, onSetShort);
+  const [getHiddenBitS, setHiddenBitS]                = localStorageState("hiddenBitS", false, onSetHiddenBitS);
+  const [getHiddenOthers, setHiddenOthers]            = localStorageState("hiddenOthers", false, onSetHiddenOthers);
+  const [getShownTips, setShownTips]                  = localStorageState("shownTips", false, onSetShownTips);
+  const [getDisplayVisible, setDisplayVisible]        = localStorageState("displayVisible", false, onSetDisplayVisible);
+  const [getStarCounterVisible,setStarCounterVisible] = localStorageState("starCounterVisible", false, onSetStarCounterVisible);
+  const [getDisplayWidth, setDisplayWidth]            = localStorageState("displayWidth", '300px', undefined, identity);
+  const [getDisplayHeight, setDisplayHeight]          = localStorageState("displayHeight", '200px', undefined, identity);
+  const [getContentWidth, setContentWidth]            = localStorageState("contentWidth", '800px', undefined, identity);
+  const [getContentHeight, setContentHeight]          = localStorageState("contentHeight", '400px', undefined, identity);
+  const [getMark1Color, setMark1Color]                = localStorageState("mark1Color", MARK_1_DEFAULT, onSetMark1Color, identity);
+  const [getMark2Color, setMark2Color]                = localStorageState("mark2Color", MARK_2_DEFAULT, onSetMark2Color, identity);
 
-  nightMode = (localStorage.getItem("nightMode") || "true") === "true";
-  shortMode = localStorage.getItem("shortMode") === "true";
-  hiddenBitS = localStorage.getItem("hiddenBitS") === "true";
-  hiddenOthers = localStorage.getItem("hiddenOthers") === "true";
-  shownTips = localStorage.getItem("shownTips") === "true";
-  if (nightMode) document.body.classList.add("nightMode");
-  setShort(shortMode);
-  setHiddenBitS(hiddenBitS);
-  setHiddenOthers(hiddenOthers);
-  setShownTips(shownTips);
-
-  if(JSON.parse(localStorage.getItem("displayVisible"))) toggleDisplay();
-  if(JSON.parse(localStorage.getItem("starCounterVisible"))) toggleStarCounter();
+  const contentDiv = document.getElementById("content");
+  contentDiv.style.setProperty("width", getContentWidth());
+  contentDiv.style.setProperty("height", getContentHeight());
 
   const displayDiv = document.getElementById("display");
-  const contentDiv = document.getElementById("content");
+  displayDiv.style.setProperty("width", getDisplayWidth());
+  displayDiv.style.setProperty("height", getDisplayHeight());
 
   const displaySizeObserver = new MutationObserver(() => 
   {
-    localStorage.setItem("displayWidth", displayDiv.style.width);
-    localStorage.setItem("displayHeight", displayDiv.style.height);
+    setDisplayWidth(displayDiv.style.width);
+    setDisplayHeight(displayDiv.style.height);
   });
 
   const contentSizeObserver = new MutationObserver(() => 
   {
-    localStorage.setItem("contentWidth", contentDiv.style.width);
-    localStorage.setItem("contentHeight", contentDiv.style.height);
+    setContentWidth(contentDiv.style.width);
+    setContentHeight(contentDiv.style.height);
   });
 
   displaySizeObserver.observe(displayDiv, {attributes: true, attributeFilter: ["style"]});
-
   contentSizeObserver.observe(contentDiv, {attributes: true, attributeFilter: ["style"]});
 
-  if(localStorage.getItem("displayWidth") && localStorage.getItem("displayHeight"))
-  {
-    displayDiv.style.setProperty("width", localStorage.getItem("displayWidth"));
-    displayDiv.style.setProperty("height", localStorage.getItem("displayHeight"));
-  }
-  
-  if(localStorage.getItem("contentWidth") && localStorage.getItem("contentHeight"))
-  {
-    contentDiv.style.setProperty("width", localStorage.getItem("contentWidth"));
-    contentDiv.style.setProperty("height", localStorage.getItem("contentHeight"));
-  }
-  
-  if(localStorage.getItem("mark1Color"))
-  {
-    mark1Color = localStorage.getItem("mark1Color");
-  }
-
-  if(localStorage.getItem("mark2Color"))
-  {
-    mark2Color = localStorage.getItem("mark2Color");
-  }
+  document.getElementById("starCounterBtn" )?.addEventListener?.("click", toggleStateCallback(getStarCounterVisible, setStarCounterVisible));
+  document.getElementById("displayBtn"     )?.addEventListener?.("click", toggleStateCallback(getDisplayVisible    , setDisplayVisible    ));
+  document.getElementById("nightBtn"       )?.addEventListener?.("click", toggleStateCallback(getNightMode         , setNightMode         ));
+  document.getElementById("shortBtn"       )?.addEventListener?.("click", toggleStateCallback(getShortMode         , setShortMode         ));
+  document.getElementById("toggleOthersBtn")?.addEventListener?.("click", toggleStateCallback(getHiddenOthers      , setHiddenOthers      ));
+  document.getElementById("toggleBitSBtn"  )?.addEventListener?.("click", toggleStateCallback(getHiddenBitS        , setHiddenBitS        ));
+  document.getElementById("toggleTipsBtn"  )?.addEventListener?.("click", toggleStateCallback(getShownTips         , setShownTips         ));
 
   const mark1ColorPicker = document.getElementById("mark1ColorPicker");
   const mark2ColorPicker = document.getElementById("mark2ColorPicker");
   const resetColorsBtn   = document.getElementById("resetColorsBtn");
 
-  mark1ColorPicker.jscolor.fromString(mark1Color);
-  document.body.style.setProperty("--color1BG", mark1Color);
+  const initialMark1Color = getMark1Color();
+  mark1ColorPicker.jscolor.fromString(initialMark1Color);
 
-  mark2ColorPicker.jscolor.fromString(mark2Color);
-  document.body.style.setProperty("--color2BG", mark2Color);
+  const initialMark2Color = getMark2Color();
+  mark2ColorPicker.jscolor.fromString(initialMark2Color);
 
-  mark1ColorPicker.addEventListener("input", setMark1Color);
-  mark2ColorPicker.addEventListener("input", setMark2Color);
-  resetColorsBtn.addEventListener("click", resetColors);
+  mark1ColorPicker.addEventListener("input", () => { setMark1Color(`"${mark1ColorPicker.jscolor.toHEXString()}"`) });
+  mark2ColorPicker.addEventListener("input", () => { setMark2Color(`"${mark2ColorPicker.jscolor.toHEXString()}"`) });
+  resetColorsBtn.addEventListener("click", resetColors(setMark1Color, setMark2Color));
 });
 
-function setMark1Color() {
-  mark1Color = document.getElementById("mark1ColorPicker").jscolor.toHEXString();
-  localStorage.setItem("mark1Color", mark1Color);
+function onSetMark1Color(mark1Color) {
   document.body.style.setProperty("--color1BG", mark1Color);
 }
 
-function setMark2Color() {
-  mark2Color = document.getElementById("mark2ColorPicker").jscolor.toHEXString();
-  localStorage.setItem("mark2Color", mark2Color);
+function onSetMark2Color(mark2Color) {
   document.body.style.setProperty("--color2BG", mark2Color);
 }
 
-function resetColors(mark1ColorPicker, mark2ColorPicker) { 
-  document.getElementById("mark1ColorPicker").jscolor.fromString(MARK_1_DEFAULT);
-  document.getElementById("mark2ColorPicker").jscolor.fromString(MARK_2_DEFAULT);
-  setMark1Color();
-  setMark2Color();
+function resetColors(setMark1Color, setMark2Color) {
+  return () => {
+    document.getElementById("mark1ColorPicker").jscolor.fromString(MARK_1_DEFAULT);
+    document.getElementById("mark2ColorPicker").jscolor.fromString(MARK_2_DEFAULT);
+    setMark1Color(MARK_1_DEFAULT);
+    setMark2Color(MARK_2_DEFAULT);
+  } 
 }
 
-function toggleNightMode() {
-  if (nightMode) {
-    nightMode = false;
-    localStorage.setItem("nightMode", nightMode);
+
+function onSetDisplayVisible(displayVisible) {
+  const clist = document.getElementById("display").classList;
+  if(displayVisible) {
+    clist.remove("hidden");
+  } else {
+    clist.add("hidden");
+  }
+}
+
+function onSetStarCounterVisible(startCounterVisible) {
+  const clist = document.getElementById("starCounter").classList;
+  if(startCounterVisible) {
+    clist.remove("hidden");
+  } else {
+    clist.add("hidden");
+  }
+}
+
+function onSetNight(nightMode) {
+  if (!nightMode) {
     document.body.classList.remove("nightMode");
   }
   else {
-    nightMode = true;
-    localStorage.setItem("nightMode", nightMode);
     document.body.classList.add("nightMode");
-  }
-  updateWindow();
+  }  
 }
 
-function setShort(sm) {
+function onSetShort(sm) {
 
   for (const child of [...document.getElementById("main").children].filter(x => !x.id.startsWith("count")).flatMap(x => [...x.children])) {
     if (!("long" in child.dataset)) {
@@ -516,19 +495,7 @@ function setShort(sm) {
   }
 }
 
-function toggleShort() {
-  if (shortMode) {
-    shortMode = false;
-    localStorage.setItem("shortMode", shortMode);
-  }
-  else {
-    shortMode = true;
-    localStorage.setItem("shortMode", shortMode);
-  }
-  setShort(shortMode);
-}
-
-function setHiddenBitS(hBS) {
+function onSetHiddenBitS(hBS) {
   const bitS = document.querySelector("div[data-short=BitS]");
   if(hBS)
   {
@@ -542,7 +509,7 @@ function setHiddenBitS(hBS) {
   }
 }
 
-function setHiddenOthers(hOthers) {
+function onSetHiddenOthers(hOthers) {
   const others = document.getElementById("others");
   if(hOthers)
   {
@@ -556,31 +523,7 @@ function setHiddenOthers(hOthers) {
   }
 }
 
-function toggleBitS() {
-  if (hiddenBitS) {
-    hiddenBitS = false;
-    localStorage.setItem("hiddenBitS", hiddenBitS);
-  }
-  else {
-    hiddenBitS = true;
-    localStorage.setItem("hiddenBitS", hiddenBitS);
-  }
-  setHiddenBitS(hiddenBitS);
-}
-
-function toggleOthers() {
-  if (hiddenOthers) {
-    hiddenOthers = false;
-    localStorage.setItem("hiddenOthers", hiddenOthers);
-  }
-  else {
-    hiddenOthers = true;
-    localStorage.setItem("hiddenOthers", hiddenOthers);
-  }
-  setHiddenOthers(hiddenOthers);
-}
-
-function setShownTips(sTips) {
+function onSetShownTips(sTips) {
   const tips = document.getElementById("tooltips");
   if(!sTips)
   {
@@ -592,18 +535,6 @@ function setShownTips(sTips) {
     tips.classList.remove("hidden");
     document.getElementById("toggleTipsBtn").value = "hide controls";
   }
-}
-
-function toggleTips() {
-  if (shownTips) {
-    shownTips = false;
-    localStorage.setItem("shownTips", shownTips);
-  }
-  else {
-    shownTips = true;
-    localStorage.setItem("shownTips", shownTips);
-  }
-  setShownTips(shownTips);
 }
 
 function incrementStarCount() {

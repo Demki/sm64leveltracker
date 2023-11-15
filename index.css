@@ -149,7 +149,7 @@ body {
   counter-increment: picked2;
 }
 
-div[data-looping^="yes"]::after {
+div[data-looping="yes"]::after {
   content: "↩";
   display: flex;
   align-items: center;
