@@ -1,21 +1,183 @@
-// this whole thing is an ugly hack and needs to be refactored some day
+const BUTTONS = Object.freeze({
+  Left: 0,
+  Middle: 1,
+  Right: 2
+});
 
-const LEFT_MOUSE_BUTTON = 0;
-const MIDDLE_MOUSE_BUTTON = 1;
-const RIGHT_MOUSE_BUTTON = 2;
+const MODIFIERS = Object.freeze({
+  None: 0,
+  Ctrl: 4,
+  Shift: 8,
+  Alt: 16,
+});
 
-const CONNECT_BUTTON = LEFT_MOUSE_BUTTON;
-const MARK_1_BUTTON = RIGHT_MOUSE_BUTTON;
-const MARK_2_BUTTON = MIDDLE_MOUSE_BUTTON;
+const ACTIONS = Object.freeze({
+  Connect: 0,
+  ConnectSelf: 1,
+  Disconnect: 2,
+  Mark1: 3,
+  Mark2: 4,
+});
+
+const ACTIONS_KEY_MAPPING = Object.freeze({
+  [BUTTONS.Left   | MODIFIERS.None]: ACTIONS.Connect,
+  [BUTTONS.Left   | MODIFIERS.Ctrl]: ACTIONS.ConnectSelf,
+  [BUTTONS.Middle | MODIFIERS.Ctrl]: ACTIONS.Disconnect,
+  [BUTTONS.Right  | MODIFIERS.None]: ACTIONS.Mark1,
+  [BUTTONS.Middle | MODIFIERS.None]: ACTIONS.Mark2,
+});
+
+/**
+ * @template T
+ * @typedef {T[keyof T]} ValueOf - because why not 
+ */
+
+const DRAG_STATES = Object.freeze({
+  None: 0,
+  Dragging: 1
+});
+
+/**
+ * @typedef {{
+*       lineElement: SVGPathElement, 
+*       originalElement: HTMLElement,
+*       startX: number, 
+*       startY: number, 
+*       endX: number, 
+*       endY: number
+*     }} DragInfo
+ * @typedef {{
+ *   dragState: typeof DRAG_STATES.None, 
+ *   dragInfo: undefined
+ * } | {
+ *   dragState: typeof DRAG_STATES.Dragging,
+ *   dragInfo: DragInfo
+ * }} DndState
+ * @type {DndState}
+ */
+const global_dnd_state = Object.seal({
+  dragState: DRAG_STATES.None,
+  dragInfo: undefined,
+});
+
+const NOOP = () => {};
+
+/**
+ * @param {DragInfo} dragInfo
+ */
+function setPathLineDAttribute({lineElement, startX, startY, endX, endY}) {
+  lineElement.setAttribute('d', `M${startX},${startY} L${endX},${endY}`);
+}
+
+/**
+ * @param {Pick<MouseEvent, 'clientX' | 'clientY' | 'currentTarget'>} ev
+ */
+function getMouseOffset({clientX, clientY, currentTarget}) {
+  const rect = currentTarget.getBoundingClientRect();
+  const offsetX = clientX - rect.left;
+  const offsetY = clientY - rect.top;
+  return { offsetX, offsetY };
+}
+
+/**
+ * @param {MouseEvent} ev 
+ */
+function connectStart({ target, clientX, clientY, currentTarget }) {
+  if(!target.classList.contains("item") || target.classList.contains("nocon")) {
+    return;
+  }
+  const { offsetLeft, offsetTop, offsetWidth, offsetHeight } = target;
+  const gEl = document.getElementById('connectingLine');
+  const { offsetX, offsetY } = getMouseOffset({ clientX, clientY, currentTarget });
+  while(gEl.firstChild) {
+    gEl.firstChild.remove();
+  }
+  const lineElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  gEl.appendChild(lineElement);
+  global_dnd_state.dragInfo = {
+    startX: offsetLeft + offsetWidth / 2,
+    startY: offsetTop + offsetHeight / 2,
+    endX: offsetX,
+    endY: offsetY,
+    lineElement,
+    originalElement: target
+  }
+  global_dnd_state.dragState = DRAG_STATES.Dragging;
+  setPathLineDAttribute(global_dnd_state.dragInfo);
+}
+
+/**
+ * @param {MouseEvent} ev 
+ */
+function connectWhile(ev) {
+  if(global_dnd_state.dragState === DRAG_STATES.Dragging) {
+    const { offsetX, offsetY } = getMouseOffset(ev);
+    global_dnd_state.dragInfo.endX = offsetX;
+    global_dnd_state.dragInfo.endY = offsetY;
+    setPathLineDAttribute(global_dnd_state.dragInfo);
+  }
+}
+
+/**
+ * @param {boolean} connectSelf
+ * @returns {(ev: MouseEvent) => void}
+ */
+function connectEnd(connectSelf) {
+  return ({ target }) => {
+    if(global_dnd_state.dragState !== DRAG_STATES.Dragging) {
+      return;
+    }
+    global_dnd_state.dragInfo.lineElement.remove();
+
+    const shouldConnectSelf = connectSelf && target === global_dnd_state.dragInfo.originalElement && !isPath(target.parentElement);
+    const shouldConnect = target.classList.contains("item") 
+      && !target.classList.contains("nocon") 
+      && (target !== global_dnd_state.dragInfo.originalElement);
+    if(shouldConnectSelf) {
+      const newPath = document.createElement("div");
+      newPath.classList.add("path");
+      newPath.dataset.looping = "yes";
+      document.getElementById("main").insertBefore(newPath, target.parentElement);
+      newPath.append(target);
+    } else if(shouldConnect) {
+      connect(global_dnd_state.dragInfo.originalElement, target);
+    }
+
+    global_dnd_state.dragState = DRAG_STATES.None;
+    global_dnd_state.dragInfo = undefined;
+  }
+}
+
+/**
+ * @type {{
+*  [P in ValueOf<typeof ACTIONS>]: 
+*    {start?: (MouseEvent) => void, while?: (MouseEvent) => void, end: (MouseEvent) => void}
+* }}
+*/
+const ACTIONS_CALLBACKS = {
+  [ACTIONS.Connect]: 
+    {start: connectStart,
+    while: connectWhile, 
+    end: connectEnd(false)},
+  [ACTIONS.ConnectSelf]: 
+    {start: connectStart,
+    while: connectWhile, 
+    end: connectEnd(true)},
+  [ACTIONS.Disconnect]: 
+    {end: disconnect},
+  [ACTIONS.Mark1]: 
+    {end: mark(1)},
+  [ACTIONS.Mark2]: 
+    {end: mark(2)},
+}
 
 const DEFAULT_STAR_COUNT = 70;
 
 function mark(v) {
-  return (ev) => {
-    m(ev.target);
-    function m(target) {
+  return ({target}) => {
+    if(target.classList.contains("item")){
       const mark = target.dataset.mark;
-      const newMark = target.dataset.mark === v ? '0' : v;
+      const newMark = target.dataset.mark === `${v}` ? '0' : v;
       if (!target.classList.replace(`color${mark}`, `color${newMark}`)) {
         target.classList.add(`color${newMark}`);
       }
@@ -24,9 +186,6 @@ function mark(v) {
   }
 }
 
-let state = 'none';
-let prev = null;
-let dragLine = {};
 let nightMode = false;
 let shortMode = false;
 let hiddenBitS = false;
@@ -39,85 +198,36 @@ const MARK_2_DEFAULT = "#118d11"
 let mark1Color = MARK_1_DEFAULT;
 let mark2Color = MARK_2_DEFAULT;
 
-function createLine({ layerX, layerY, offsetX, offsetY, target: { offsetWidth, offsetHeight } }) {
-  const startX = layerX - offsetX + offsetWidth / 2;
-  const startY = layerY - offsetY + offsetHeight / 2;
-  const gEl = document.getElementById('connectingLine');
-
-  dragLine.startX = startX;
-  dragLine.startY = startY;
-  gEl.innerHTML = `<path/>`;
-  dragLine.element = gEl.children[0];
-  updateLine(layerX, layerY);
-}
-
-function updateLine(x, y) {
-  if (dragLine.element) {
-    dragLine.endX = x;
-    dragLine.endY = y;
-    dragLine.element.setAttribute('d', `M${dragLine.startX},${dragLine.startY} L${dragLine.endX},${dragLine.endY}`);
-  }
-}
-
-function removeLine() {
-  dragLine.element.remove();
-  dragLine = {};
-}
-
+/**
+ * 
+ * @param {MouseEvent} ev 
+ */
 function mousedown(ev) {
   if(ev.button === MIDDLE_MOUSE_BUTTON) ev.preventDefault(); // prevent scroll toggle with middle mouse button
-  if (ev.target.classList.contains("item")) {
-    prev = ev.target;
-    if (!ev.target.classList.contains('nocon')) {
-      switch (ev.button) {
-        case CONNECT_BUTTON:
-          state = 'connecting';
-          createLine(ev);
-          break;
-      }
-    }
-  }
+  const button = ev.button;
+  const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl)
+                  | (ev.shiftKey && MODIFIERS.Shift)
+                  | (ev.altKey && MODIFIERS.Alt);
+  const modifiedButton = button | modifiers;
+  ACTIONS_CALLBACKS[ACTIONS_KEY_MAPPING[modifiedButton]]?.start?.(ev);
 }
 
 function mousemove(ev) {
-  if (state === 'connecting') {
-    updateLine(ev.layerX, ev.layerY);
-  }
+  const button = ev.button;
+  const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl)
+                  | (ev.shiftKey && MODIFIERS.Shift)
+                  | (ev.altKey && MODIFIERS.Alt);
+  const modifiedButton = button | modifiers;
+  ACTIONS_CALLBACKS[ACTIONS_KEY_MAPPING[modifiedButton]]?.while?.(ev);
 }
 
 function mouseup(ev) {
-  let prevState = state;
-  state = 'none';
-  const target = ev.target;
-  if (prevState === 'connecting') {
-    removeLine();
-    if (target.classList.contains('nocon')) prevState = 'none';
-  }
-  if (target.classList.contains("item")) {
-    if (ev.ctrlKey && prevState === 'connecting' && target === prev && !isPath(target.parentElement) && !target.classList.contains('nocon')) {
-      let newPath = document.createElement("div");
-      newPath.classList.add("path");
-      newPath.dataset.looping = "yes";
-      document.getElementById("main").insertBefore(newPath, prev.parentElement);
-      newPath.append(prev);
-    }
-    else if (prevState !== 'connecting' && target === prev) {
-      if (ev.button === MARK_1_BUTTON) mark('1')(ev);
-      if (ev.button === MARK_2_BUTTON) {
-        if (ev.ctrlKey) {
-          disconnect(target);
-        }
-        else {
-          mark('2')(ev);
-        }
-      }
-    }
-    else if (prevState === 'connecting' && target !== prev) {
-      connect(target);
-    }
-  }
-  updateWindow();
-  prev = null;
+  const button = ev.button;
+  const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl)
+                  | (ev.shiftKey && MODIFIERS.Shift)
+                  | (ev.altKey && MODIFIERS.Alt);
+  const modifiedButton = button | modifiers;
+  ACTIONS_CALLBACKS[ACTIONS_KEY_MAPPING[modifiedButton]]?.end?.(ev);
 }
 
 function isPath(p) {
@@ -140,14 +250,16 @@ function addPath(newPath, startPath) {
 }
 
 function dumpToList(...ls) {
-  document.getElementById("list").append(...ls);
+  const list = document.getElementById("list");
+  list.append(...ls);
+  list.append(...Array.from(list.children).sort((a, b) => Number(a.id.substring(4)) - Number(b.id.substring(4))));
 }
 
-function disconnect(target) {
+function disconnect({target}) {
   const targetPath = target.parentElement;
   if (!isPath(targetPath)) return;
   targetPath.dataset.looping = "no";
-  if (prev.nextElementSibling !== null) {
+  if (target.nextElementSibling !== null) {
     const afterTarget = [...dropUntilExc(x => x === target, targetPath.children)];
     if (afterTarget.length > 1) {
       createPath(targetPath, ...afterTarget);
@@ -162,7 +274,7 @@ function disconnect(target) {
   }
 }
 
-function connect(target) {
+function connect(prev, target) {
 
   let prevPath = prev.parentElement;
   const targetPath = target.parentElement;
