@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&family=Noto+Emoji&display=swap');
+@import url('./NotoColorEmoji.css');
 
 body {
   --background: hsl(0, 0%, 100%);
