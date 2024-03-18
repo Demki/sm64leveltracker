@@ -5,23 +5,26 @@
  * @returns {T}
  */
 function identity(x) {
-    return x;
+  return x;
 }
 
 /**
  * @template T
  * @param {string} key 
  * @param {T} defaultVal
- * @param {(T) => void} [onSet]
- * @param {(string) => T} [parseFunc]
- * @param {(T) => string} [serializeFunc=JSON.stringify]
+ * @param {{
+ *  onSet?: (value: T) => void;
+ *  parseFunc?: (serialized: string) => T;
+ *  serializeFunc?: (value: T) => string;
+ *  deferFirstOnSet?: boolean;
+ * }} [options]
  * @returns {[get: () => T, set: (newVal: T) => void]}
  */
-function localStorageState(key, defaultVal, onSet, parseFunc=JSON.parse, serializeFunc=JSON.stringify)
-{
+function localStorageState(key, defaultVal, options = {}) {
+  const { parseFunc = JSON.parse, serializeFunc = JSON.stringify, deferFirstOnSet = false, onSet } = options;
   const fromStorage = localStorage.getItem(key);
   let variable = fromStorage !== null ? parseFunc(fromStorage) : defaultVal;
-  
+
   const get = () => {
     return variable;
   };
@@ -32,7 +35,11 @@ function localStorageState(key, defaultVal, onSet, parseFunc=JSON.parse, seriali
     onSet?.(newVal);
   };
 
-  onSet?.(variable);
+  if (deferFirstOnSet) {
+    setTimeout(() => onSet?.(variable));
+  } else {
+    onSet?.(variable);
+  }
 
   return [get, set];
 }

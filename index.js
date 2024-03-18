@@ -32,10 +32,10 @@ const ACTIONS = Object.freeze({
 });
 
 const ACTIONS_KEY_MAPPING = Object.freeze({
-  [BUTTONS.Left   | MODIFIERS.None]: ACTIONS.Connect,
-  [BUTTONS.Left   | MODIFIERS.Ctrl]: ACTIONS.ConnectSelf,
+  [BUTTONS.Left | MODIFIERS.None]: ACTIONS.Connect,
+  [BUTTONS.Left | MODIFIERS.Ctrl]: ACTIONS.ConnectSelf,
   [BUTTONS.Middle | MODIFIERS.Ctrl]: ACTIONS.Disconnect,
-  [BUTTONS.Right  | MODIFIERS.None]: ACTIONS.Mark1,
+  [BUTTONS.Right | MODIFIERS.None]: ACTIONS.Mark1,
   [BUTTONS.Middle | MODIFIERS.None]: ACTIONS.Mark2,
 });
 
@@ -72,19 +72,19 @@ const global_dnd_state = Object.seal({
   dragInfo: undefined,
 });
 
-const NOOP = () => {};
+const NOOP = () => { };
 
 /**
  * @param {DragInfo} dragInfo
  */
-function setPathLineDAttribute({lineElement, startX, startY, endX, endY}) {
+function setPathLineDAttribute({ lineElement, startX, startY, endX, endY }) {
   lineElement.setAttribute('d', `M${startX},${startY} L${endX},${endY}`);
 }
 
 /**
  * @param {Pick<MouseEvent, 'clientX' | 'clientY' | 'currentTarget'>} ev
  */
-function getMouseOffset({clientX, clientY, currentTarget}) {
+function getMouseOffset({ clientX, clientY, currentTarget }) {
   const rect = currentTarget.getBoundingClientRect();
   const offsetX = clientX - rect.left;
   const offsetY = clientY - rect.top;
@@ -95,13 +95,13 @@ function getMouseOffset({clientX, clientY, currentTarget}) {
  * @param {MouseEvent} ev 
  */
 function connectStart({ target, clientX, clientY, currentTarget }) {
-  if(!target.classList.contains(CLASSES.Item) || target.classList.contains(CLASSES.PeventConnection)) {
+  if (!target.classList.contains(CLASSES.Item) || target.classList.contains(CLASSES.PeventConnection)) {
     return;
   }
   const { offsetLeft, offsetTop, offsetWidth, offsetHeight } = target;
   const gEl = document.getElementById('connectingLine');
   const { offsetX, offsetY } = getMouseOffset({ clientX, clientY, currentTarget });
-  while(gEl.firstChild) {
+  while (gEl.firstChild) {
     gEl.firstChild.remove();
   }
   const lineElement = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -122,7 +122,7 @@ function connectStart({ target, clientX, clientY, currentTarget }) {
  * @param {MouseEvent} ev 
  */
 function connectWhile(ev) {
-  if(global_dnd_state.dragState === DRAG_STATES.Dragging) {
+  if (global_dnd_state.dragState === DRAG_STATES.Dragging) {
     const { offsetX, offsetY } = getMouseOffset(ev);
     global_dnd_state.dragInfo.endX = offsetX;
     global_dnd_state.dragInfo.endY = offsetY;
@@ -136,22 +136,22 @@ function connectWhile(ev) {
  */
 function connectEnd(connectSelf) {
   return ({ target }) => {
-    if(global_dnd_state.dragState !== DRAG_STATES.Dragging) {
+    if (global_dnd_state.dragState !== DRAG_STATES.Dragging) {
       return;
     }
     global_dnd_state.dragInfo.lineElement.remove();
 
     const shouldConnectSelf = connectSelf && target === global_dnd_state.dragInfo.originalElement && !isPath(target.parentElement);
-    const shouldConnect = target.classList.contains(CLASSES.Item) 
-      && !target.classList.contains(CLASSES.PeventConnection) 
+    const shouldConnect = target.classList.contains(CLASSES.Item)
+      && !target.classList.contains(CLASSES.PeventConnection)
       && (target !== global_dnd_state.dragInfo.originalElement);
-    if(shouldConnectSelf) {
+    if (shouldConnectSelf) {
       const newPath = document.createElement("div");
       newPath.classList.add(CLASSES.Path);
       newPath.dataset.looping = "yes";
       document.getElementById("main").insertBefore(newPath, target.parentElement);
       newPath.append(target);
-    } else if(shouldConnect) {
+    } else if (shouldConnect) {
       connect(global_dnd_state.dragInfo.originalElement, target);
     }
     updateWindow();
@@ -168,27 +168,31 @@ function connectEnd(connectSelf) {
 * }}
 */
 const ACTIONS_CALLBACKS = {
-  [ACTIONS.Connect]: 
-    {start: connectStart,
-    while: connectWhile, 
-    end: connectEnd(false)},
-  [ACTIONS.ConnectSelf]: 
-    {start: connectStart,
-    while: connectWhile, 
-    end: connectEnd(true)},
-  [ACTIONS.Disconnect]: 
-    {end: disconnect},
-  [ACTIONS.Mark1]: 
-    {end: mark(1)},
-  [ACTIONS.Mark2]: 
-    {end: mark(2)},
+  [ACTIONS.Connect]:
+  {
+    start: connectStart,
+    while: connectWhile,
+    end: connectEnd(false)
+  },
+  [ACTIONS.ConnectSelf]:
+  {
+    start: connectStart,
+    while: connectWhile,
+    end: connectEnd(true)
+  },
+  [ACTIONS.Disconnect]:
+    { end: disconnect },
+  [ACTIONS.Mark1]:
+    { end: mark(1) },
+  [ACTIONS.Mark2]:
+    { end: mark(2) },
 }
 
 const DEFAULT_STAR_COUNT = 70;
 
 function mark(v) {
-  return ({target}) => {
-    if(target.classList.contains(CLASSES.Item)){
+  return ({ target }) => {
+    if (target.classList.contains(CLASSES.Item)) {
       const mark = target.dataset.mark;
       const newMark = target.dataset.mark === `${v}` ? '0' : v;
       if (!target.classList.replace(`${CLASSES.ColorPrefix}${mark}`, `${CLASSES.ColorPrefix}${newMark}`)) {
@@ -207,11 +211,11 @@ const MARK_2_DEFAULT = "#118d11"
  * @param {MouseEvent} ev 
  */
 function mousedown(ev) {
-  if(ev.button === BUTTONS.Middle) ev.preventDefault(); // prevent scroll toggle with middle mouse button
+  if (ev.button === BUTTONS.Middle) ev.preventDefault(); // prevent scroll toggle with middle mouse button
   const button = ev.button;
   const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl)
-                  | (ev.shiftKey && MODIFIERS.Shift)
-                  | (ev.altKey && MODIFIERS.Alt);
+    | (ev.shiftKey && MODIFIERS.Shift)
+    | (ev.altKey && MODIFIERS.Alt);
   const modifiedButton = button | modifiers;
   ACTIONS_CALLBACKS[ACTIONS_KEY_MAPPING[modifiedButton]]?.start?.(ev);
 }
@@ -219,8 +223,8 @@ function mousedown(ev) {
 function mousemove(ev) {
   const button = ev.button;
   const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl)
-                  | (ev.shiftKey && MODIFIERS.Shift)
-                  | (ev.altKey && MODIFIERS.Alt);
+    | (ev.shiftKey && MODIFIERS.Shift)
+    | (ev.altKey && MODIFIERS.Alt);
   const modifiedButton = button | modifiers;
   ACTIONS_CALLBACKS[ACTIONS_KEY_MAPPING[modifiedButton]]?.while?.(ev);
 }
@@ -228,8 +232,8 @@ function mousemove(ev) {
 function mouseup(ev) {
   const button = ev.button;
   const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl)
-                  | (ev.shiftKey && MODIFIERS.Shift)
-                  | (ev.altKey && MODIFIERS.Alt);
+    | (ev.shiftKey && MODIFIERS.Shift)
+    | (ev.altKey && MODIFIERS.Alt);
   const modifiedButton = button | modifiers;
   ACTIONS_CALLBACKS[ACTIONS_KEY_MAPPING[modifiedButton]]?.end?.(ev);
 }
@@ -258,7 +262,7 @@ function dumpToList(...ls) {
   list.append(...Array.from(list.children).sort((a, b) => Number(a.id.substring(IDS.ItemPrefix.length)) - Number(b.id.substring(IDS.ItemPrefix.length))));
 }
 
-function disconnect({target}) {
+function disconnect({ target }) {
   const targetPath = target.parentElement;
   if (!isPath(targetPath)) return;
   delete targetPath.dataset.looping;
@@ -333,12 +337,12 @@ function connect(prev, target) {
 function updateWindow() {
   const dWindow = document.getElementById("display");
   dWindow.innerHTML = "<div style='overflow-wrap: break-word'>" +
-      Array.from(document.getElementById("main").children).filter(x => x.classList.contains(CLASSES.Path)).map((p) => {
-        let result = Array.from(p.children).map(c => c.dataset.short + (c.dataset.mark === '1' ? '*' : c.dataset.mark === '2' ? '(*)' : '')).join("<wbr>→<wbr>");
-        if (p.dataset.looping === "yes") result += "↩";
-        return `<div class="dpath">${result}</div>`
-      }).join(" ")
-      + "</div>";
+    Array.from(document.getElementById("main").children).filter(x => x.classList.contains(CLASSES.Path)).map((p) => {
+      let result = Array.from(p.children).map(c => c.dataset.short + (c.dataset.mark === '1' ? '*' : c.dataset.mark === '2' ? '(*)' : '')).join("<wbr>→<wbr>");
+      if (p.dataset.looping === "yes") result += "↩";
+      return `<div class="dpath">${result}</div>`
+    }).join(" ")
+    + "</div>";
 }
 
 window.addEventListener("load", () => {
@@ -348,37 +352,23 @@ window.addEventListener("load", () => {
   document.getElementById("content").addEventListener('mouseup', mouseup);
   document.addEventListener('keydown', keyEventHandler);
 
-  let i = 0;
-  for (const child of document.getElementById("list").children) {
-    child.classList.add(CLASSES.Item);
-    child.classList.add(`${CLASSES.ColorPrefix}0`);
-    child.id = IDS.ItemPrefix + i;
-    i++;
-    child.dataset.mark = '0';
-  }
+  const [getShortMode, setShortMode] = localStorageState("shortMode", false, { onSet: onSetShort, deferFirstOnSet: true });
+  const [getSplitTHI, setSplitTHI] = localStorageState("splitTHI", false, { onSet: onSetSplitTHI(getShortMode), deferFirstOnSet: true });
 
-  for (const child of document.getElementById("others").children) {
-    child.classList.add(CLASSES.PeventConnection);
-    child.classList.add(CLASSES.Item);
-    child.classList.add(`${CLASSES.ColorPrefix}0`);
-    child.id = IDS.ItemPrefix + i;
-    i++;
-    child.dataset.mark = '0';
-  }
+  initializeItems(getSplitTHI());
 
-  const [getNightMode, setNightMode]                  = localStorageState("nightMode", true, onSetNight);
-  const [getShortMode, setShortMode]                  = localStorageState("shortMode", false, onSetShort);
-  const [getHiddenBitS, setHiddenBitS]                = localStorageState("hiddenBitS", false, onSetHiddenBitS);
-  const [getHiddenOthers, setHiddenOthers]            = localStorageState("hiddenOthers", false, onSetHiddenOthers);
-  const [getShownTips, setShownTips]                  = localStorageState("shownTips", false, onSetShownTips);
-  const [getDisplayVisible, setDisplayVisible]        = localStorageState("displayVisible", false, onSetDisplayVisible);
-  const [getStarCounterVisible,setStarCounterVisible] = localStorageState("starCounterVisible", false, onSetStarCounterVisible);
-  const [getDisplayWidth, setDisplayWidth]            = localStorageState("displayWidth", '300px', undefined, identity, identity);
-  const [getDisplayHeight, setDisplayHeight]          = localStorageState("displayHeight", '200px', undefined, identity, identity);
-  const [getContentWidth, setContentWidth]            = localStorageState("contentWidth", '800px', undefined, identity, identity);
-  const [getContentHeight, setContentHeight]          = localStorageState("contentHeight", '400px', undefined, identity, identity);
-  const [getMark1Color, setMark1Color]                = localStorageState("mark1Color", MARK_1_DEFAULT, onSetMark1Color, identity, identity);
-  const [getMark2Color, setMark2Color]                = localStorageState("mark2Color", MARK_2_DEFAULT, onSetMark2Color, identity, identity);
+  const [getNightMode, setNightMode] = localStorageState("nightMode", true, { onSet: onSetNight });
+  const [getHiddenBitS, setHiddenBitS] = localStorageState("hiddenBitS", false, { onSet: onSetHiddenBitS });
+  const [getHiddenOthers, setHiddenOthers] = localStorageState("hiddenOthers", false, { onSet: onSetHiddenOthers });
+  const [getShownTips, setShownTips] = localStorageState("shownTips", false, { onSet: onSetShownTips });
+  const [getDisplayVisible, setDisplayVisible] = localStorageState("displayVisible", false, { onSet: onSetDisplayVisible });
+  const [getStarCounterVisible, setStarCounterVisible] = localStorageState("starCounterVisible", false, { onSet: onSetStarCounterVisible });
+  const [getDisplayWidth, setDisplayWidth] = localStorageState("displayWidth", '300px', { onSet: undefined, serializeFunc: identity, parseFunc: identity });
+  const [getDisplayHeight, setDisplayHeight] = localStorageState("displayHeight", '200px', { onSet: undefined, serializeFunc: identity, parseFunc: identity });
+  const [getContentWidth, setContentWidth] = localStorageState("contentWidth", '800px', { onSet: undefined, serializeFunc: identity, parseFunc: identity });
+  const [getContentHeight, setContentHeight] = localStorageState("contentHeight", '400px', { onSet: undefined, serializeFunc: identity, parseFunc: identity });
+  const [getMark1Color, setMark1Color] = localStorageState("mark1Color", MARK_1_DEFAULT, { onSet: onSetMark1Color, serializeFunc: identity, parseFunc: identity });
+  const [getMark2Color, setMark2Color] = localStorageState("mark2Color", MARK_2_DEFAULT, { onSet: onSetMark2Color, serializeFunc: identity, parseFunc: identity });
 
   const contentDiv = document.getElementById("content");
   contentDiv.style.setProperty("width", getContentWidth());
@@ -388,90 +378,156 @@ window.addEventListener("load", () => {
   displayDiv.style.setProperty("width", getDisplayWidth());
   displayDiv.style.setProperty("height", getDisplayHeight());
 
-  const displaySizeObserver = new MutationObserver(() => 
-  {
+  const displaySizeObserver = new MutationObserver(() => {
     setDisplayWidth(displayDiv.style.width);
     setDisplayHeight(displayDiv.style.height);
   });
 
-  const contentSizeObserver = new MutationObserver(() => 
-  {
+  const contentSizeObserver = new MutationObserver(() => {
     setContentWidth(contentDiv.style.width);
     setContentHeight(contentDiv.style.height);
   });
 
-  displaySizeObserver.observe(displayDiv, {attributes: true, attributeFilter: ["style"]});
-  contentSizeObserver.observe(contentDiv, {attributes: true, attributeFilter: ["style"]});
+  displaySizeObserver.observe(displayDiv, { attributes: true, attributeFilter: ["style"] });
+  contentSizeObserver.observe(contentDiv, { attributes: true, attributeFilter: ["style"] });
 
-  document.getElementById("starCounterBtn" )?.addEventListener?.("click", toggleStateCallback(getStarCounterVisible, setStarCounterVisible));
-  document.getElementById("displayBtn"     )?.addEventListener?.("click", toggleStateCallback(getDisplayVisible    , setDisplayVisible    ));
-  document.getElementById("nightBtn"       )?.addEventListener?.("click", toggleStateCallback(getNightMode         , setNightMode         ));
-  document.getElementById("shortBtn"       )?.addEventListener?.("click", toggleStateCallback(getShortMode         , setShortMode         ));
-  document.getElementById("toggleOthersBtn")?.addEventListener?.("click", toggleStateCallback(getHiddenOthers      , setHiddenOthers      ));
-  document.getElementById("toggleBitSBtn"  )?.addEventListener?.("click", toggleStateCallback(getHiddenBitS        , setHiddenBitS        ));
-  document.getElementById("toggleTipsBtn"  )?.addEventListener?.("click", toggleStateCallback(getShownTips         , setShownTips         ));
+  document.getElementById("starCounterBtn")?.addEventListener?.("click", toggleStateCallback(getStarCounterVisible, setStarCounterVisible));
+  document.getElementById("displayBtn")?.addEventListener?.("click", toggleStateCallback(getDisplayVisible, setDisplayVisible));
+  document.getElementById("nightBtn")?.addEventListener?.("click", toggleStateCallback(getNightMode, setNightMode));
+  document.getElementById("shortBtn")?.addEventListener?.("click", toggleStateCallback(getShortMode, setShortMode));
+  document.getElementById("toggleOthersBtn")?.addEventListener?.("click", toggleStateCallback(getHiddenOthers, setHiddenOthers));
+  document.getElementById("toggleBitSBtn")?.addEventListener?.("click", toggleStateCallback(getHiddenBitS, setHiddenBitS));
+  document.getElementById("toggleTipsBtn")?.addEventListener?.("click", toggleStateCallback(getShownTips, setShownTips));
+  document.getElementById("toggleTHISplitBtn")?.addEventListener?.("click", toggleStateCallback(getSplitTHI, setSplitTHI));
   document.getElementById("incrementStarCountBtn")?.addEventListener("click", incrementStarCount);
   document.getElementById("decrementStarCountBtn")?.addEventListener("click", decrementStarCount);
 
   const mark1ColorPicker = document.getElementById("mark1ColorPicker");
   const mark2ColorPicker = document.getElementById("mark2ColorPicker");
-  const resetColorsBtn   = document.getElementById("resetColorsBtn");
+  const resetColorsBtn = document.getElementById("resetColorsBtn");
 
-  if(mark1ColorPicker && mark2ColorPicker && resetColorsBtn) {
+  if (mark1ColorPicker && mark2ColorPicker && resetColorsBtn) {
     mark1ColorPicker.jscolor.fromString(getMark1Color());
     mark2ColorPicker.jscolor.fromString(getMark2Color());
-  
+
     mark1ColorPicker.addEventListener("input", () => { setMark1Color(mark1ColorPicker.jscolor.toHEXString()) });
     mark2ColorPicker.addEventListener("input", () => { setMark2Color(mark2ColorPicker.jscolor.toHEXString()) });
     resetColorsBtn.addEventListener("click", resetColors(setMark1Color, setMark2Color));
   }
 });
 
+/**
+ * @param {boolean} isTHISplit 
+ */
+function initializeItems(isTHISplit) {
+  const list = document.getElementById("list");
+  const othersList = document.getElementById("others");
+  const levels = !isTHISplit ? LEVELS : LEVELS.flatMap((li) => {
+    if (li.shortName === "THI") {
+      return REPLACEMENTS["THI"];
+    }
+    return li;
+  });
+  const others = OTHERS;
+
+  let id = 0;
+  for (const listItem of levels) {
+    const element = createItemElement(listItem, id);
+    id++;
+    list.append(element);
+  }
+
+  for (const listItem of others) {
+    const element = createItemElement(listItem, id);
+    id++;
+    element.classList.add(CLASSES.PeventConnection);
+    list.append(element);
+  }
+}
+
+/**
+ * 
+ * @param {ListItem} item 
+ * @param {number | string} id 
+ */
+function createItemElement(item, id) {
+  const child = document.createElement('div');
+  child.innerText = item.longName;
+  child.classList.add(CLASSES.Item);
+  child.classList.add(`${CLASSES.ColorPrefix}0`);
+  child.id = IDS.ItemPrefix + id;
+  child.dataset.mark = '0';
+  child.dataset.short = item.shortName;
+  return child;
+}
+
+/**
+ * @param {string} mark1Color 
+ */
 function onSetMark1Color(mark1Color) {
   document.body.style.setProperty("--color1BG", mark1Color);
 }
 
+/**
+ * @param {string} mark2Color 
+ */
 function onSetMark2Color(mark2Color) {
   document.body.style.setProperty("--color2BG", mark2Color);
 }
 
+/**
+ * @param {(color: string) => void} setMark1Color 
+ * @param {(color: string) => void} setMark2Color 
+ * @returns 
+ */
 function resetColors(setMark1Color, setMark2Color) {
   return () => {
     document.getElementById("mark1ColorPicker").jscolor.fromString(MARK_1_DEFAULT);
     document.getElementById("mark2ColorPicker").jscolor.fromString(MARK_2_DEFAULT);
     setMark1Color(MARK_1_DEFAULT);
     setMark2Color(MARK_2_DEFAULT);
-  } 
+  }
 }
 
-
+/**
+ * @param {boolean} displayVisible 
+ */
 function onSetDisplayVisible(displayVisible) {
   const clist = document.getElementById("display").classList;
-  if(displayVisible) {
+  if (displayVisible) {
     clist.remove("hidden");
   } else {
     clist.add("hidden");
   }
 }
 
+/**
+ * @param {boolean} startCounterVisible 
+ */
 function onSetStarCounterVisible(startCounterVisible) {
   const clist = document.getElementById("starCounter").classList;
-  if(startCounterVisible) {
+  if (startCounterVisible) {
     clist.remove("hidden");
   } else {
     clist.add("hidden");
   }
 }
 
+/**
+ * @param {boolean} nightMode 
+ */
 function onSetNight(nightMode) {
   if (!nightMode) {
     document.body.classList.remove("nightMode");
   }
   else {
     document.body.classList.add("nightMode");
-  }  
+  }
 }
 
+/**
+ * @param {boolean} sm 
+ */
 function onSetShort(sm) {
 
   for (const child of [...document.getElementById("main").children].filter(x => !x.id.startsWith("count")).flatMap(x => [...x.children])) {
@@ -483,74 +539,116 @@ function onSetShort(sm) {
     }
     if (sm) {
       child.innerText = child.dataset.short;
-      document.body.style.setProperty("--minItemWidth", "100px");
     } else {
       child.innerText = child.dataset.long;
-      document.body.style.setProperty("--minItemWidth", "240px");
     }
+  }
+  if (sm) {
+    document.body.style.setProperty("--minItemWidth", "100px");
+  } else {
+    document.body.style.setProperty("--minItemWidth", "240px");
   }
 }
 
+/**
+ * @param {boolean} hBS 
+ */
 function onSetHiddenBitS(hBS) {
   const bitS = document.querySelector("div[data-short=BitS]");
-  if(hBS)
-  {
+  if (hBS) {
     bitS.classList.add("hidden");
     document.getElementById("toggleBitSBtn").value = "show BitS";
   }
-  else
-  {
+  else {
     bitS.classList.remove("hidden");
     document.getElementById("toggleBitSBtn").value = "hide BitS";
   }
 }
 
+/**
+ * @param {boolean} hOthers 
+ */
 function onSetHiddenOthers(hOthers) {
   const others = document.getElementById("others");
-  if(hOthers)
-  {
+  if (hOthers) {
     others.classList.add("hidden");
     document.getElementById("toggleOthersBtn").value = "show Toads and Mips";
   }
-  else
-  {
+  else {
     others.classList.remove("hidden");
     document.getElementById("toggleOthersBtn").value = "hide Toads and Mips";
   }
 }
 
+/**
+ * @param {boolean} sTips 
+ */
 function onSetShownTips(sTips) {
   const tips = document.getElementById("tooltips");
-  if(!sTips)
-  {
+  if (!sTips) {
     tips.classList.add("hidden");
     document.getElementById("toggleTipsBtn").value = "show controls";
   }
-  else
-  {
+  else {
     tips.classList.remove("hidden");
     document.getElementById("toggleTipsBtn").value = "hide controls";
+  }
+}
+
+/**
+ * @param {() => boolean} getShortMode 
+ * @returns {(splitTHI: boolean) => void}
+ */
+function onSetSplitTHI(getShortMode) {
+  return (splitTHI) => {
+    if (splitTHI) {
+      const THIelem = document.querySelector(`[data-short="THI"]`);
+      if (THIelem) {
+        REPLACEMENTS["THI"].forEach((li, idx) => {
+          const element = createItemElement(li, "");
+          element.id = THIelem.id + '_' + idx;
+          THIelem.insertAdjacentElement("beforebegin", element);
+        });
+        THIelem.remove();
+      }
+      document.getElementById("toggleTHISplitBtn").value = "merge THI";
+    } else {
+      const THISelem = document.querySelector(`[data-short="THIS"]`);
+      const THIBelem = document.querySelector(`[data-short="THIB"]`);
+      const THIitem = LEVELS.find((li) => li.shortName === "THI");
+      if (THIBelem && THIitem) {
+        const element = createItemElement(THIitem, "");
+        element.id = THIBelem.id.replace(/_[0-9]*$/, "");
+        THIBelem.insertAdjacentElement("beforebegin", element);
+        for (const elem of [THISelem, THIBelem]) {
+          elem.remove();
+        }
+      }
+      document.getElementById("toggleTHISplitBtn").value = "split THI";
+    }
+    onSetShort(getShortMode());
   }
 }
 
 function incrementStarCount() {
   const el = document.getElementById("starCount");
   const starCount = Number.parseInt(el.innerHTML);
-  if(Number.isNaN(starCount)) el.innerHTML = DEFAULT_STAR_COUNT.toString();
+  if (Number.isNaN(starCount)) el.innerHTML = DEFAULT_STAR_COUNT.toString();
   else el.innerHTML = (starCount + 1).toString();
 }
 
 function decrementStarCount() {
   const el = document.getElementById("starCount");
   const starCount = Number.parseInt(el.innerHTML);
-  if(Number.isNaN(starCount)) el.innerHTML = DEFAULT_STAR_COUNT.toString();
+  if (Number.isNaN(starCount)) el.innerHTML = DEFAULT_STAR_COUNT.toString();
   else el.innerHTML = (starCount - 1).toString();
 }
 
-
+/**
+ * @param {KeyboardEvent} ev 
+ */
 function keyEventHandler(ev) {
-  switch(ev.code)
-  {
+  switch (ev.code) {
     case "ArrowUp":
       incrementStarCount();
       break;
