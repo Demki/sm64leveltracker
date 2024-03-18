@@ -352,11 +352,10 @@ window.addEventListener("load", () => {
   document.getElementById("content").addEventListener('mouseup', mouseup);
   document.addEventListener('keydown', keyEventHandler);
 
-  const [getShortMode, setShortMode] = localStorageState("shortMode", false, { onSet: onSetShort, deferFirstOnSet: true });
-  const [getSplitTHI, setSplitTHI] = localStorageState("splitTHI", false, { onSet: onSetSplitTHI(getShortMode), deferFirstOnSet: true });
-
-  initializeItems(getSplitTHI());
-
+  initializeItems(false);
+  
+  const [getShortMode, setShortMode] = localStorageState("shortMode", false, { onSet: onSetShort });
+  const [getSplitTHI, setSplitTHI] = localStorageState("splitTHI", false, { onSet: onSetSplitTHI(getShortMode) });
   const [getNightMode, setNightMode] = localStorageState("nightMode", true, { onSet: onSetNight });
   const [getHiddenBitS, setHiddenBitS] = localStorageState("hiddenBitS", false, { onSet: onSetHiddenBitS });
   const [getHiddenOthers, setHiddenOthers] = localStorageState("hiddenOthers", false, { onSet: onSetHiddenOthers });
@@ -416,32 +415,22 @@ window.addEventListener("load", () => {
   }
 });
 
-/**
- * @param {boolean} isTHISplit 
- */
-function initializeItems(isTHISplit) {
+function initializeItems() {
   const list = document.getElementById("list");
   const othersList = document.getElementById("others");
-  const levels = !isTHISplit ? LEVELS : LEVELS.flatMap((li) => {
-    if (li.shortName === "THI") {
-      return REPLACEMENTS["THI"];
-    }
-    return li;
-  });
-  const others = OTHERS;
 
   let id = 0;
-  for (const listItem of levels) {
+  for (const listItem of LEVELS) {
     const element = createItemElement(listItem, id);
     id++;
     list.append(element);
   }
 
-  for (const listItem of others) {
+  for (const listItem of OTHERS) {
     const element = createItemElement(listItem, id);
     id++;
     element.classList.add(CLASSES.PeventConnection);
-    list.append(element);
+    othersList.append(element);
   }
 }
 
