@@ -352,7 +352,7 @@ window.addEventListener("load", () => {
   document.getElementById("content").addEventListener('mouseup', mouseup);
   document.addEventListener('keydown', keyEventHandler);
 
-  initializeItems(false);
+  initializeItems();
   
   const [getShortMode, setShortMode] = localStorageState("shortMode", false, { onSet: onSetShort });
   const [getSplitTHI, setSplitTHI] = localStorageState("splitTHI", false, { onSet: onSetSplitTHI(getShortMode) });
