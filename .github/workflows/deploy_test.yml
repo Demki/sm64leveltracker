@@ -29,10 +29,10 @@ jobs:
           rm -rf tmp/.git
           cd repo
           BRANCH=$(git branch --show-current)
-          TARGET_DIRNAME=$(echo $BRANCH | sed 's/^test\///' | sed 's/\//-/')
+          TARGET_DIRNAME=$(echo $BRANCH)
           git remote update
           git checkout pages
-          mkdir $TARGET_DIRNAME
+          mkdir -p $TARGET_DIRNAME
           cd ..
           cp -rf tmp/* -t repo/$TARGET_DIRNAME
           cd repo
