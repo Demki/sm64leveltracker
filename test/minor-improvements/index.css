@@ -5,8 +5,10 @@ body {
   --foreground: hsl(240, 4%, 10%);
 
   --midColor: hsl(0, 4%, 50%);
-  --sepColor: hsl(60, 60%, 20%);
   --hoverColor: hsl(240, 100%, 25%);
+
+  --sepColor: hsl(60, 60%, 20%);
+  --removeLoopColor: hsl(60, 10%, 50%);
 
   --buttonBGColor: hsl(0, 0%, 88%);
 
@@ -28,8 +30,10 @@ body.nightMode {
   --foreground: hsl(260, 4%, 74%);
 
   --midColor: hsl(260, 4%, 30%);
-  --sepColor: hsl(60, 30%, 40%);
   --hoverColor: hsl(240, 50%, 50%);
+
+  --sepColor: hsl(60, 30%, 40%);
+  --removeLoopColor: hsl(60, 10%, 40%);
 
   --buttonBGColor: hsl(260, 9%, 15%);
 
@@ -230,6 +234,10 @@ input {
 }
 
 body[data-ctrl] {
+  & .path[data-looping="yes"]:has(> .item:hover)::after {
+    color: var(--removeLoopColor);
+    transition: color 400ms;
+  }
 
   & .path[data-looping="yes"] .item,
   & .path .item:not(:last-child) {
