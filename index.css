@@ -1,10 +1,11 @@
 @import url('./NotoColorEmoji.css');
 
 body {
-  --background: hsl(0, 0%, 100%);
-  --foreground: hsl(0, 0%, 0%);
+  --background: hsl(240, 9%, 90%);
+  --foreground: hsl(240, 4%, 10%);
 
-  --midColor: hsl(0, 0%, 50%);
+  --midColor: hsl(0, 4%, 50%);
+  --sepColor: hsl(60, 60%, 20%);
   --hoverColor: hsl(240, 100%, 25%);
 
   --buttonBGColor: hsl(0, 0%, 88%);
@@ -27,6 +28,7 @@ body.nightMode {
   --foreground: hsl(260, 4%, 74%);
 
   --midColor: hsl(260, 4%, 30%);
+  --sepColor: hsl(60, 30%, 40%);
   --hoverColor: hsl(240, 50%, 50%);
 
   --buttonBGColor: hsl(260, 9%, 15%);
@@ -52,14 +54,14 @@ body {
   resize: both;
   overflow: auto;
   counter-reset: picked1 picked2;
-  display:grid;
+  display: grid;
   grid-template-columns: 1fr;
   grid-gap: 3px;
   border-radius: 8px 8px 0;
   margin-bottom: 8px;
 }
 
-#content > svg {
+#content>svg {
   position: absolute;
   z-index: 9;
   left: 0;
@@ -78,7 +80,7 @@ body {
   margin-bottom: 1px;
 }
 
-.hidden{
+.hidden {
   display: none !important;
 }
 
@@ -108,7 +110,9 @@ body {
   grid-auto-rows: max-content;
 }
 
-#list, .path, #others {
+#list,
+.path,
+#others {
   text-align: center;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(var(--minItemWidth), 1fr));
@@ -186,6 +190,7 @@ input {
 #colors {
   margin-top: 8px;
 }
+
 #colors input[data-jscolor] {
   width: 60px;
 }
@@ -206,10 +211,49 @@ input {
 #starCountIncrements {
   display: inline-grid;
   grid-template-columns: 1fr 1fr;
-  grid-gap:2px;
+  grid-gap: 2px;
   align-items: center;
 }
 
 #starCountIncrements input {
   font-size: 60%;
+}
+
+@keyframes appear {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+body[data-ctrl] {
+
+  & .path[data-looping="yes"] .item,
+  & .path .item:not(:last-child) {
+    &:hover {
+      position: relative;
+
+      &::after {
+        content: '';
+        display: block;
+        position: absolute;
+        top: 2px;
+        bottom: 2px;
+        right: -5px;
+        width: 0px;
+        border-right-width: 1px;
+        border-right-style: solid;
+        border-right-color: var(--sepColor);
+        opacity: 0;
+        animation-duration: 400ms;
+        animation-name: appear;
+        animation-fill-mode: forwards;
+        animation-iteration-count: 1;
+
+      }
+    }
+  }
 }

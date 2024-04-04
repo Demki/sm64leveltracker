@@ -46,6 +46,24 @@ function localStorageState(key, defaultVal, options = {}) {
 
 /**
  * @template T
+ * @param {string} key 
+ * @param {T} defaultVal
+ * @param {{
+*  onSet?: (value: T) => void;
+*  parseFunc?: (serialized: string) => T;
+*  serializeFunc?: (value: T) => string;
+*  deferFirstOnSet?: boolean;
+* }} [options]
+* @returns {() => void}
+*/
+function localStorageToggle(key, defaultVal, options) {
+  const [get, set] = localStorageState(key, defaultVal, options);
+  return toggleStateCallback(get, set);
+}
+
+
+/**
+ * @template T
  * @param {() => T} get
  * @param {(T) => void} set
  * @returns {() => void}

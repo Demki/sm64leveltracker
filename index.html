@@ -8,6 +8,8 @@
   <script src="jscolor.min.js"></script>
   <script src="generatorHelpers.js"></script>
   <script src="localStorageHelpers.js"></script>
+  <script src="constants.js"></script>
+  <script src="mouseHandlers.js"></script>
   <script src="items.js"></script>
   <script src="index.js"></script>
 </head>
@@ -58,12 +60,25 @@
   </div>
   <div id="tooltips" class="hidden">
     <ul>
-      <li>Left Mouse Button hold & drag to connect stages.</li>
+      <li>Left Mouse Button, hold & drag to connect stages.</li>
       <li>Middle Mouse Button to mark/unmark a stage green, Right Mouse Button to mark/unmark a stage red</li>
-      <li>Ctrl + Middle Mouse Button to disconnect a path, this will disconnect the stage connected to the one clicked,
-        for example if you have BOB→WF→JRB→BBH→HMC→LLL and you hold Ctrl and click with the middle mouse button on JRB
-        you'll get two paths: BBH→HMC→LLL and BOB→WF→JRB</li>
       <li>Ctrl + Left clicking a stage that is not in a path will put it in its own path, looping back to itself.</li>
+      <li>Ctrl + Middle Mouse Button to disconnect a path, this will disconnect the stage connected to the one clicked.
+        <br>
+        Holding Ctrl and hovering over a stage will highlight where the separation will happen. <br>
+        for example if you have
+        <ul>
+          <li>BOB→WF→JRB→BBH→HMC→LLL</li>
+        </ul>
+        and you hold Ctrl and click with the middle mouse button
+        on JRB
+        you'll get two paths:
+        <ul>
+          <li>BBH→HMC→LLL</li>
+          <li>BOB→WF→JRB</li>
+        </ul>
+      </li>
+
     </ul>
   </div>
 </body>
