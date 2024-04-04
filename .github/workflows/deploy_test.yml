@@ -30,9 +30,14 @@ jobs:
           cd repo
           BRANCH=$(git branch --show-current)
           TARGET_DIRNAME=$(echo $BRANCH)
+          if [ -z $TARGET_DIRNAME ] ; then
+            echo "couldn't get target directory..."
+            exit 1
+          fi
           git remote update
           git checkout pages
           mkdir -p $TARGET_DIRNAME
+          rm -r $TARGET_DIRNAME/*
           cd ..
           cp -rf tmp/* -t repo/$TARGET_DIRNAME
           cd repo
