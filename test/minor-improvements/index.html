@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>SM64 level tracker</title>
+  <link rel="stylesheet" href="index.css" />
+  <script src="jscolor.min.js"></script>
+  <script src="generatorHelpers.js"></script>
+  <script src="localStorageHelpers.js"></script>
+  <script src="constants.js"></script>
+  <script src="mouseHandlers.js"></script>
+  <script src="items.js"></script>
+  <script src="index.js"></script>
+</head>
+
+<body>
+  <div id="display" class="hidden"></div>
+  <div id="content">
+    <svg id="SVG" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+      <defs>
+        <marker id="arrowhead" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" />
+        </marker>
+        <marker id="arrowstart" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3" markerHeight="3">
+          <circle cx="5" cy="5" r="5" />
+        </marker>
+      </defs>
+      <g id="connectingLine" fill="none" stroke-width="2" marker-start="url(#arrowstart)" marker-end="url(#arrowhead)"
+        opacity="0.7"></g>
+    </svg>
+    <div id="main">
+      <div id="list">
+      </div>
+      <div id="others">
+      </div>
+    </div>
+  </div>
+  <div id="starCounter" class="hidden">
+    <span id="starSymbol">⭐</span>: <span id="starCount">70</span>
+    <span id="starCountIncrements">
+      <input id="incrementStarCountBtn" type="button" value="+" />
+      <input id="decrementStarCountBtn" type="button" value="-" />
+    </span>
+  </div>
+  <input id="starCounterBtn" type="button" value="show/hide star counter" />
+  <input id="displayBtn" type="button" value="show/hide display" />
+  <input id="nightBtn" type="button" value="toggle night mode" />
+  <input id="shortBtn" type="button" value="toggle short names" />
+  <input id="toggleTipsBtn" type="button" value="show controls" />
+  <div id="toggles">
+    <input id="toggleOthersBtn" type="button" value="hide Toads and Mips" />
+    <input id="toggleBitSBtn" type="button" value="hide BitS" />
+    <input id="toggleTHISplitBtn" type="button" value="split THI" />
+  </div>
+  <div id="colors">
+    <label for="mark1ColorPicker">Color 1:</label> <input data-jscolor="{preset:'dark'}" id="mark1ColorPicker" />
+    <label for="mark2ColorPicker">Color 2:</label> <input data-jscolor="{preset:'dark'}" id="mark2ColorPicker" />
+    <input type="button" value="reset colors" id="resetColorsBtn" />
+  </div>
+  <div id="tooltips" class="hidden">
+    <ul>
+      <li>Left Mouse Button, hold & drag to connect stages.</li>
+      <li>Middle Mouse Button to mark/unmark a stage green, Right Mouse Button to mark/unmark a stage red</li>
+      <li>Ctrl + Left clicking a stage that is not in a path will put it in its own path, looping back to itself.</li>
+      <li>Ctrl + Middle Mouse Button to disconnect a path, this will disconnect the stage connected to the one clicked.
+        <br>
+        Holding Ctrl and hovering over a stage will highlight where the separation will happen. <br>
+        for example if you have
+        <ul>
+          <li>BOB→WF→JRB→BBH→HMC→LLL</li>
+        </ul>
+        and you hold Ctrl and click with the middle mouse button
+        on JRB
+        you'll get two paths:
+        <ul>
+          <li>BBH→HMC→LLL</li>
+          <li>BOB→WF→JRB</li>
+        </ul>
+      </li>
+
+    </ul>
+  </div>
+</body>
+
+</html>
