@@ -36,8 +36,8 @@ jobs:
           fi
           git remote update
           git checkout pages
+          rm -rf $TARGET_DIRNAME
           mkdir -p $TARGET_DIRNAME
-          rm -r $TARGET_DIRNAME/*
           cd ..
           cp -rf tmp/* -t repo/$TARGET_DIRNAME
           cd repo
