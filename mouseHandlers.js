@@ -206,9 +206,9 @@ let clickTarget = null;
 function mousedown(ev) {
   if (ev.button === BUTTONS.Middle) ev.preventDefault(); // prevent scroll toggle with middle mouse button
   const button = ev.button;
-  const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl)
-    | (ev.shiftKey && MODIFIERS.Shift)
-    | (ev.altKey && MODIFIERS.Alt);
+  const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl);
+    // | (ev.shiftKey && MODIFIERS.Shift)
+    // | (ev.altKey && MODIFIERS.Alt);
   const modifiedButton = button | modifiers;
   clickTarget = ev.target;
   ACTIONS_CALLBACKS[ACTIONS_KEY_MAPPING[modifiedButton]]?.start?.(ev);
@@ -219,9 +219,9 @@ function mousedown(ev) {
  */
 function mousemove(ev) {
   const button = ev.button;
-  const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl)
-    | (ev.shiftKey && MODIFIERS.Shift)
-    | (ev.altKey && MODIFIERS.Alt);
+  const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl);
+    // | (ev.shiftKey && MODIFIERS.Shift)
+    // | (ev.altKey && MODIFIERS.Alt);
   
   if(ev.ctrlKey) {
     setModifierKeyOnBody('ctrl', true);
@@ -241,28 +241,15 @@ function mousemove(ev) {
  */
 function mouseup(ev) {
   const button = ev.button;
-  const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl)
-    | (ev.shiftKey && MODIFIERS.Shift)
-    | (ev.altKey && MODIFIERS.Alt);
+  const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl);
+    // | (ev.shiftKey && MODIFIERS.Shift)
+    // | (ev.altKey && MODIFIERS.Alt);
   const modifiedButton = button | modifiers;
   ACTIONS_CALLBACKS[ACTIONS_KEY_MAPPING[modifiedButton]]?.end?.(ev);
   if (clickTarget === ev.target) {
     ACTIONS_CALLBACKS[ACTIONS_KEY_MAPPING[modifiedButton]]?.click?.(ev);
   }
   clickTarget = null;
-}
-
-/**
- * @param {MouseEvent} ev
- */
-function click(ev) {
-  if (ev.button === BUTTONS.Middle) ev.preventDefault(); // prevent scroll toggle with middle mouse button
-  const button = ev.button;
-  const modifiers = (ev.ctrlKey && MODIFIERS.Ctrl)
-    | (ev.shiftKey && MODIFIERS.Shift)
-    | (ev.altKey && MODIFIERS.Alt);
-  const modifiedButton = button | modifiers;
-  ACTIONS_CALLBACKS[ACTIONS_KEY_MAPPING[modifiedButton]]?.click?.(ev);
 }
 
 function isPath(p) {
